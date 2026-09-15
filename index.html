@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#34d399">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Пульс">
+<title>Пульс</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--accent:#34d399;--bg:#0d1017;--surface:#141824;--surface-2:#1a2030;--elev:#212a3e;--text:#eef1f8;--muted:#8d95ab;--border:rgba(255,255,255,.08);--danger:#fb7185;--r-lg:20px;--r-md:14px;--shadow:0 16px 40px rgba(0,0,0,.4);--fd:'Unbounded',system-ui,sans-serif;--fb:'Manrope',system-ui,sans-serif;--safe-top:env(safe-area-inset-top,0);--safe-bot:env(safe-area-inset-bottom,0)}
+[data-theme="light"]{--bg:#edf0f6;--surface:#ffffff;--surface-2:#f3f5fa;--elev:#ffffff;--text:#161b28;--muted:#67708a;--border:rgba(22,27,40,.09);--shadow:0 16px 40px rgba(35,45,90,.10)}
+html,body{overscroll-behavior:none;touch-action:manipulation}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s;padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
+body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1px);background-size:28px 28px}
+.orb{position:fixed;border-radius:50%;filter:blur(100px);z-index:-1;pointer-events:none;opacity:.3}
+[data-theme="light"] .orb{opacity:.16}
+.orb-1{width:560px;height:560px;background:var(--accent);top:-180px;left:-140px;animation:drift1 24s ease-in-out infinite alternate}
+.orb-2{width:480px;height:480px;background:color-mix(in srgb,var(--accent) 30%,#6366f1);bottom:-160px;right:-120px;animation:drift2 30s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(70px,50px) scale(1.12)}}
+@keyframes drift2{to{transform:translate(-60px,-40px) scale(1.08)}}
+.topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:13px 16px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center}
+.brand-text b{font-family:var(--fd);font-size:14px;font-weight:800;display:block}
+.brand-text span{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.6px;text-transform:uppercase}
+.month-nav{display:flex;align-items:center;gap:6px;grid-column:1/-1;order:3;justify-content:center;margin-top:4px}
+.month-title{font-family:var(--fd);font-size:17px;font-weight:800;min-width:160px;text-align:center}
+.month-title.swap{animation:swap .35s ease}
+@keyframes swap{from{opacity:0;transform:translateX(14px)}}
+.top-actions{display:flex;gap:7px}
+.btn{font:inherit;font-weight:800;border:none;cursor:pointer;border-radius:11px;padding:9px 14px;display:inline-flex;align-items:center;gap:7px;transition:.2s;color:var(--text)}
+.btn-primary{background:var(--accent);color:#0a1310}
+.btn-ghost{background:var(--surface-2);border:1px solid var(--border)}
+.btn-danger{background:transparent;border:1px solid color-mix(in srgb,var(--danger) 55%,transparent);color:var(--danger)}
+.icon-btn{width:40px;height:40px;flex:none;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;transition:.2s;font:inherit}
+.icon-btn:hover{color:var(--text)}
+.icon-btn.sm{width:32px;height:32px;border-radius:9px}
+.layout{max-width:1100px;margin:0 auto;padding:14px}
+.calendar-card,.day-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
+.day-panel{margin-top:14px}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:7px}
+.weekdays span{text-align:center;font-size:10px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);padding:4px 0}
+.weekdays span.we{color:color-mix(in srgb,var(--accent) 75%,var(--text))}
+.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day-cell{background:var(--surface-2);border:1px solid transparent;border-radius:var(--r-md);min-height:54px;padding:5px;display:flex;flex-direction:column;gap:2px;cursor:pointer;position:relative;overflow:hidden;transition:transform .16s,border-color .2s}
+.day-cell.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.day-cell.other{opacity:.38}
+.day-cell.other.keep{opacity:.85}
+.num{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.day-cell.today .num{background:var(--accent);color:#0a1310}
+.chips{display:flex;flex-direction:column;gap:2px;min-height:0}
+.chip{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 5px;border-radius:5px;background:color-mix(in srgb,var(--chip-c) 15%,transparent);border:1px solid color-mix(in srgb,var(--chip-c) 30%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.chip .dot{width:5px;height:5px;border-radius:50%;background:var(--chip-c);flex:none}
+.chip .ct{overflow:hidden;text-overflow:ellipsis}
+.more{font-size:9.5px;color:var(--muted);font-weight:800}
+.panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.panel-date{font-family:var(--fd);font-size:46px;font-weight:800;line-height:1}
+.panel-sub{color:var(--muted);font-weight:700;margin-top:4px;font-size:13px}
+.ev-item{display:flex;gap:10px;padding:11px 10px 11px 13px;border-radius:11px;background:var(--surface-2);cursor:pointer;position:relative;overflow:hidden;transition:.18s;margin-bottom:7px}
+.ev-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ev-c)}
+.ev-time{font-family:var(--fd);font-size:11px;font-weight:600;color:var(--muted);min-width:42px;padding-top:2px}
+.ev-body{min-width:0;flex:1}
+.ev-body b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.live{color:var(--accent);font-weight:800}
+.empty{text-align:center;padding:26px 0 20px;color:var(--muted)}
+.empty-ico{font-size:32px;margin-bottom:7px}
+.empty p{font-weight:800;color:var(--text)}
+.empty small{font-size:12px}
+.panel-foot{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);font-weight:700;text-transform:capitalize}
+.field{margin-bottom:13px}
+.lbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{width:100%;font:inherit;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);outline:none;transition:.2s;font-size:16px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+textarea{resize:vertical;min-height:60px}
+.row2{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}
+.time-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.time-row input[type=time]{width:120px;flex:none}
+.dur-custom{display:flex;gap:5px;align-items:center;color:var(--muted);font-size:13px;font-weight:800}
+.dur-custom input{width:56px}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.hint{margin-top:8px;font-size:12px;color:var(--accent);font-weight:800}
+.chip-btn{border:1px solid var(--border);background:var(--surface-2);color:var(--muted);border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.chip-btn.on{background:color-mix(in srgb,var(--accent) 17%,transparent);border-color:var(--accent);color:var(--text)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;flex:none}
+.swatch.on{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--sw)}
+.switch{position:relative;width:44px;height:25px;flex:none;display:inline-block}
+.switch input{position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2}
+.switch .track{position:absolute;inset:0;border-radius:999px;background:color-mix(in srgb,var(--muted) 28%,transparent);transition:.2s}
+.switch .thumb{position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:.2s}
+.switch input:checked~.track{background:var(--accent)}
+.switch input:checked~.thumb{left:21px}
+.modal-overlay{position:fixed;inset:0;background:rgba(4,7,14,.55);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:grid;place-items:flex-end;z-index:100;opacity:0;pointer-events:none;transition:.25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-card{background:var(--surface);border:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:530px;max-height:88vh;overflow:auto;padding:22px 20px;box-shadow:var(--shadow);transform:translateY(100%);transition:.3s cubic-bezier(.2,.9,.3,1.15)}
+.modal-overlay.open .modal-card{transform:none}
+.modal-card.wide{max-width:640px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-head h3{font-family:var(--fd);font-size:16px;font-weight:800}
+.modal-actions{display:flex;gap:10px;align-items:center;margin-top:18px;padding-bottom:var(--safe-bot)}
+.spacer{flex:1}
+.set-section h5{font-family:var(--fd);font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);margin:18px 0 4px;font-weight:600}
+.set-section:first-of-type h5{margin-top:0}
+.set-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.set-row:last-child{border-bottom:none}
+.set-row.col{flex-direction:column;align-items:flex-start;gap:10px}
+.set-txt b{font-size:13.5px}
+.set-txt small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:3px;gap:3px;flex:none}
+.seg button{border:none;background:transparent;color:var(--muted);font:inherit;font-weight:800;font-size:12.5px;padding:6px 12px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#0a1310}
+.data-btns{display:flex;gap:7px;flex-wrap:wrap}
+#toasts{position:fixed;top:calc(18px + var(--safe-top));left:14px;right:14px;z-index:200;display:flex;flex-direction:column;gap:9px;max-width:480px;margin:0 auto}
+.toast{background:var(--elev);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:13px;padding:13px 34px 13px 15px;box-shadow:var(--shadow);position:relative;animation:toastIn .4s cubic-bezier(.2,.9,.3,1.2)}
+.toast.hide{animation:toastOut .28s forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(-20px)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-20px)}}
+.toast h4{font-size:14px;margin-bottom:3px}
+.toast p{font-size:12px;color:var(--muted)}
+.toast p b{color:var(--accent)}
+.toast-actions{display:flex;gap:7px;margin-top:10px}
+.mini-btn{font:inherit;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
+.close-x{position:absolute;top:8px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px}
+@media (min-width:700px){
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:20px}
+  .day-panel{margin-top:0;position:sticky;top:100px}
+  .topbar{grid-template-columns:1fr auto 1fr}
+  .month-nav{grid-column:auto;order:0;margin-top:0}
+  .top-actions{justify-content:flex-end}
+  .day-cell{min-height:94px}
+  .chip{font-size:10.5px;padding:3px 6px}
+}
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0a1310" stroke-width="2.4" stroke-linecap="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div>
+    <div class="brand-text"><b>Пульс</b><span>календарь</span></div>
+  </div>
+  <button class="icon-btn" id="settingsBtn" title="Настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  <div class="top-actions"><button class="btn btn-primary" id="addEventBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Событие</button></div>
+  <nav class="month-nav">
+    <button class="icon-btn" id="prevMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="month-title" id="monthTitle"></div>
+    <button class="icon-btn" id="nextMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    <button class="btn btn-ghost" id="todayBtn">Сегодня</button>
+  </nav>
+</header>
+<main class="layout">
+  <section class="calendar-card">
+    <div class="weekdays" id="weekdaysRow"></div>
+    <div class="days-grid" id="daysGrid"></div>
+  </section>
+  <aside class="day-panel">
+    <div class="panel-head">
+      <div><div class="panel-date" id="panelDate"></div><div class="panel-sub" id="panelSub"></div></div>
+      <button class="icon-btn" id="panelAddBtn" style="background:var(--accent);color:#0a1310;border:none;font-size:18px;font-weight:800">+</button>
+    </div>
+    <div id="eventsList"></div>
+    <div class="panel-foot" id="panelFoot"></div>
+  </aside>
+</main>
+
+<div class="modal-overlay" id="eventModal">
+  <form class="modal-card" id="eventForm">
+    <div class="modal-head"><h3 id="eventModalTitle">Новое событие</h3><button type="button" class="icon-btn sm" data-close>✕</button></div>
+    <div class="field"><span class="lbl">Название</span><input type="text" id="evTitle" placeholder="Что запланируем?" maxlength="80" required></div>
+    <div class="field">
+      <div class="row2">
+        <div><span class="lbl">Дата</span><input type="date" id="evDate" required></div>
+        <div style="padding-bottom:4px"><span class="lbl">Весь день</span><label class="switch"><input type="checkbox" id="evAllDay"><span class="track"></span><span class="thumb"></span></label></div>
+      </div>
+    </div>
+    <div class="field" id="timeBlock">
+      <span class="lbl">Время и продолжительность</span>
+      <div class="time-row">
+        <input type="time" id="evTime">
+        <div class="dur-custom"><input type="number" id="evDurH" min="0" max="23" value="1"> ч <input type="number" id="evDurM" min="0" max="59" step="5" value="0"> мин</div>
+      </div>
+      <div class="chips-wrap" id="durChips"></div>
+      <div class="hint" id="endHint"></div>
+    </div>
+    <div class="field"><span class="lbl">Цвет</span><div class="swatches" id="evColors"></div></div>
+    <div class="field">
+      <span class="lbl">Уведомление</span>
+      <select id="evNotify">
+        <option value="default">Как в настройках</option>
+        <option value="off">Без уведомления</option>
+        <option value="0">В момент события</option>
+        <option value="5">За 5 минут</option>
+        <option value="10">За 10 минут</option>
+        <option value="15">За 15 минут</option>
+        <option value="30">За 30 минут</option>
+        <option value="60">За 1 час</option>
+        <option value="120">За 2 часа</option>
+        <option value="1440">За 1 день</option>
+      </select>
+    </div>
+    <div class="field"><span class="lbl">Заметка</span><textarea id="evNotes" placeholder="Необязательно…"></textarea></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="evDelete">Удалить</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-ghost" data-close>Отмена</button>
+      <button type="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-card wide">
+    <div class="modal-head"><h3>Настройки</h3><button class="icon-btn sm" data-close>✕</button></div>
+    <div class="set-section">
+      <h5>Внешний вид</h5>
+      <div class="set-row"><div class="set-txt"><b>Тема</b></div><div class="seg" id="stTheme"><button data-v="light">Светлая</button><button data-v="dark">Тёмная</button><button data-v="auto">Авто</button></div></div>
+      <div class="set-row"><div class="set-txt"><b>Акцент</b></div><div class="swatches" id="stAccent"></div></div>
+    </div>
+    <div class="set-section">
+      <h5>Календарь</h5>
+      <div class="set-row"><div class="set-txt"><b>Начало недели</b></div><div class="seg" id="stWeekStart"><button data-v="1">Пн</button><button data-v="0">Вс</button></div></div>
+      <div class="set-row"><div class="set-txt"><b>Длительность по умолчанию</b></div><select id="stDefDur" style="width:150px"><option value="30">30 мин</option><option value="60">1 час</option><option value="90">1,5 часа</option><option value="120">2 часа</option><option value="180">3 часа</option></select></div>
+    </div>
+    <div class="set-section">
+      <h5>Уведомления</h5>
+      <div class="set-row"><div class="set-txt"><b>Всплывающие попапы</b></div><label class="switch"><input type="checkbox" id="stPopups"><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="set-row"><div class="set-txt"><b>Не скрывать попапы</b></div><label class="switch"><input type="checkbox" id="stSticky"><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="set-row col"><div class="set-txt"><b>Предупреждать заранее</b></div><div class="chips-wrap" id="stLeads"></div></div>
+      <div class="set-row"><div class="set-txt"><b>Звук</b></div><div style="display:flex;gap:10px;align-items:center"><div class="seg" id="stSoundType"><button data-v="chime">Перезвон</button><button data-v="pulse">Импульс</button></div><label class="switch"><input type="checkbox" id="stSound"><span class="track"></span><span class="thumb"></span></label></div></div>
+      <div class="set-row"><div class="set-txt"><b>Системные уведомления</b><small id="stBrowserStatus"></small></div><label class="switch"><input type="checkbox" id="stBrowser"><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="set-row"><div class="set-txt"><b>Тест</b></div><button class="btn btn-ghost" id="stTest">🔔 Тест</button></div>
+    </div>
+    <div class="set-section">
+      <h5>Данные</h5>
+      <div class="set-row"><div class="set-txt"><b>Резервная копия</b></div><div class="data-btns"><button class="btn btn-ghost" id="stExport">Экспорт</button><button class="btn btn-ghost" id="stImport">Импорт</button><input type="file" id="stImportFile" accept=".json" hidden><button class="btn btn-danger" id="stClear">Очистить</button></div></div>
+    </div>
+  </div>
+</div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const pad=n=>String(n).padStart(2,'0');
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WD=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const WD_FULL=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const EVENT_COLORS=[['#f87171','Красный'],['#fb923c','Оранжевый'],['#fbbf24','Жёлтый'],['#34d399','Зелёный'],['#38bdf8','Голубой'],['#818cf8','Индиго'],['#e879f9','Розовый'],['#94a3b8','Серый']];
+const ACCENTS=['#34d399','#38bdf8','#a78bfa','#fb7185','#fbbf24'];
+const DUR=[15,30,45,60,90,120,180,240];
+const LEADS=[[0,'В момент события'],[5,'За 5 мин'],[10,'За 10 мин'],[15,'За 15 мин'],[30,'За 30 мин'],[60,'За 1 час'],[120,'За 2 часа'],[1440,'За 1 день']];
+const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime'};
+const fmtDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fmtHM=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const uid=()=>'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const plural=(n,f)=>{n=Math.abs(n)%100;const n1=n%10;if(n>10&&n<20)return f[2];if(n1>1&&n1<5)return f[1];if(n1===1)return f[0];return f[2]};
+const durLabel=m=>{const h=Math.floor(m/60),mm=m%60;return[h?`${h} ч`:'',mm?`${mm} мин`:''].filter(Boolean).join(' ')||'0 мин'};
+const human=ms=>{const m=Math.round(ms/60000);if(m<1)return'меньше минуты';if(m<60)return`${m} мин`;const h=Math.floor(m/60),mm=m%60;if(h<24)return mm?`${h} ч ${mm} мин`:`${h} ч`;const d=Math.floor(h/24),hh=h%24;return hh?`${d} дн ${hh} ч`:`${d} дн`};
+const store={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+let events=store.get('pulse.events',[]);
+let settings={...DEFAULTS,...store.get('pulse.settings',{})};
+let notified=new Map(Object.entries(store.get('pulse.notified',{})));
+let snoozes=[];
+const saveEvents=()=>store.set('pulse.events',events);
+const saveSettings=()=>store.set('pulse.settings',settings);
+const saveNotified=()=>store.set('pulse.notified',Object.fromEntries(notified));
+const today=new Date();
+const state={y:today.getFullYear(),m:today.getMonth(),sel:today};
+
+function applyTheme(){const dark=settings.theme==='dark'||(settings.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.setProperty('--accent',settings.accent);document.querySelector('meta[name="theme-color"]').setAttribute('content',dark?'#141824':'#ffffff')}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>settings.theme==='auto'&&applyTheme());
+const byDate=ds=>events.filter(e=>e.date===ds).sort((a,b)=>(a.allDay?0:1)-(b.allDay?0:1)||(a.time||'').localeCompare(b.time||''));
+const evStart=e=>{const[y,m,d]=e.date.split('-').map(Number);if(e.allDay||!e.time)return new Date(y,m-1,d);const[h,mi]=e.time.split(':').map(Number);return new Date(y,m-1,d,h,mi)};
+const evEnd=e=>new Date(evStart(e).getTime()+(e.duration||0)*60000);
+
+function renderCalendar(){
+  const startIdx=settings.weekStart===1?0:6;
+  weekdaysRow.innerHTML=Array.from({length:7},(_,i)=>{const mi=(startIdx+i)%7;return`<span class="${mi>=5?'we':''}">${WD[mi]}</span>`}).join('');
+  const{y,m}=state;
+  monthTitle.textContent=`${MONTHS[m]} ${y}`;
+  const first=new Date(y,m,1);
+  const offset=(((first.getDay()+6)%7)-startIdx+7)%7;
+  const dim=new Date(y,m+1,0).getDate();
+  const total=Math.ceil((offset+dim)/7)*7;
+  const todayS=fmtDate(new Date()),selS=fmtDate(state.sel);
+  let html='';
+  for(let i=0;i<total;i++){
+    const dt=new Date(y,m,i-offset+1),ds=fmtDate(dt);
+    const evs=byDate(ds);
+    const cls=['day-cell'];
+    if(dt.getMonth()!==m){cls.push('other');if(!settings.dimOther)cls.push('keep')}
+    if(ds===todayS)cls.push('today');
+    if(ds===selS)cls.push('active');
+    const chips=evs.slice(0,2).map(e=>`<div class="chip" style="--chip-c:${e.color}"><span class="dot"></span><span class="ct">${e.time?e.time+' ':''}${esc(e.title)}</span></div>`).join('');
+    const more=evs.length>2?`<div class="more">+${evs.length-2}</div>`:'';
+    html+=`<div class="${cls.join(' ')}" data-date="${ds}"><div class="num">${dt.getDate()}</div><div class="chips">${chips}${more}</div></div>`;
+  }
+  daysGrid.innerHTML=html;
+}
+daysGrid.addEventListener('click',e=>{const cell=e.target.closest('.day-cell');if(!cell)return;const[y,m,d]=cell.dataset.date.split('-').map(Number);state.sel=new Date(y,m-1,d);if(cell.classList.contains('other')){state.y=y;state.m=m-1}renderAll()});
+
+function renderPanel(){
+  const d=state.sel;
+  panelDate.textContent=d.getDate();
+  panelSub.textContent=`${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  const evs=byDate(fmtDate(d));
+  if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие»</small></div>`}
+  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=evStart(e).getTime(),en=evEnd(e).getTime();const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=evEnd(e);const plus=fmtDate(ed)!==e.date?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div></div>`}).join('')}
+  const mEvs=events.filter(e=>{const[y,m]=e.date.split('-').map(Number);return y===state.y&&m===state.m+1});
+  const mins=mEvs.reduce((a,e)=>a+(e.duration||0),0);
+  panelFoot.textContent=`${MONTHS_GEN[state.m]}: ${mEvs.length} ${plural(mEvs.length,['событие','события','событий'])}${mins?` · ${durLabel(mins)}`:''}`;
+}
+eventsList.addEventListener('click',e=>{const it=e.target.closest('.ev-item');if(!it)return;const ev=events.find(x=>x.id===it.dataset.id);if(ev)openEventModal(ev)});
+function renderAll(){renderCalendar();renderPanel()}
+
+const openModal=m=>m.classList.add('open');
+const closeModal=m=>m.classList.remove('open');
+$$('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m)}));
+$$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal-overlay'))));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal-overlay.open').forEach(closeModal)});
+
+let editingId=null,chosenColor=EVENT_COLORS[3][0];
+durChips.innerHTML=DUR.map(m=>`<button type="button" class="chip-btn" data-min="${m}">${m<60?m+' мин':durLabel(m)}</button>`).join('');
+function markDurChip(min){$$('#durChips .chip-btn').forEach(b=>b.classList.toggle('on',+b.dataset.min===min))}
+function setDuration(min){evDurH.value=Math.floor(min/60);evDurM.value=min%60;markDurChip(min);updateEndHint()}
+function updateEndHint(){if(evAllDay.checked){endHint.textContent='Событие на весь день';return}if(!evTime.value){endHint.textContent='';return}const[h,m]=evTime.value.split(':').map(Number);const dur=(+evDurH.value||0)*60+(+evDurM.value||0);const end=new Date(2000,0,1,h,m+dur);endHint.textContent=`Закончится в ${fmtHM(end)}${end.getDate()>1?' (+1 день)':''}${dur?` · ${durLabel(dur)}`:''}`}
+function syncTimeBlock(){timeBlock.style.display=evAllDay.checked?'none':''}
+function renderSwatches(){evColors.innerHTML=EVENT_COLORS.map(([c,n])=>`<div class="swatch ${c===chosenColor?'on':''}" data-c="${c}" style="--sw:${c};background:${c}" title="${n}"></div>`).join('')}
+evColors.addEventListener('click',e=>{const s=e.target.closest('.swatch');if(!s)return;chosenColor=s.dataset.c;renderSwatches()});
+durChips.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(b)setDuration(+b.dataset.min)});
+evDurH.addEventListener('input',()=>{markDurChip((+evDurH.value||0)*60+(+evDurM.value||0));updateEndHint()});
+evDurM.addEventListener('input',()=>{markDurChip((+evDurH.value||0)*60+(+evDurM.value||0));updateEndHint()});
+evTime.addEventListener('input',updateEndHint);
+evAllDay.addEventListener('change',()=>{syncTimeBlock();updateEndHint()});
+
+function openEventModal(ev){
+  editingId=ev?ev.id:null;
+  eventModalTitle.textContent=ev?'Событие':'Новое событие';
+  evTitle.value=ev?ev.title:'';
+  evDate.value=ev?ev.date:fmtDate(state.sel);
+  evAllDay.checked=ev?!!ev.allDay:false;
+  evTime.value=ev&&ev.time?ev.time:'18:00';
+  setDuration(ev?ev.duration:settings.defaultDuration);
+  chosenColor=ev?ev.color:EVENT_COLORS[3][0];renderSwatches();
+  evNotify.value=ev?String(ev.notify):'default';
+  evNotes.value=ev?ev.notes||'':'';
+  evDelete.style.display=ev?'':'none';
+  syncTimeBlock();updateEndHint();
+  openModal(eventModal);
+  setTimeout(()=>evTitle.focus(),260);
+}
+eventForm.addEventListener('submit',e=>{
+  e.preventDefault();
+  const title=evTitle.value.trim();if(!title)return;
+  const allDay=evAllDay.checked;
+  const data={title,date:evDate.value||fmtDate(new Date()),allDay,time:allDay?null:(evTime.value||'09:00'),duration:allDay?0:Math.max(5,(+evDurH.value||0)*60+(+evDurM.value||0)),color:chosenColor,notify:evNotify.value,notes:evNotes.value.trim()};
+  if(editingId)Object.assign(events.find(x=>x.id===editingId),data);
+  else events.push({id:uid(),createdAt:Date.now(),...data});
+  saveEvents();closeModal(eventModal);renderAll();
+});
+evDelete.addEventListener('click',()=>{if(!confirm('Удалить событие?'))return;events=events.filter(x=>x.id!==editingId);saveEvents();closeModal(eventModal);renderAll()});
+addEventBtn.addEventListener('click',()=>openEventModal(null));
+panelAddBtn.addEventListener('click',()=>openEventModal(null));
+
+function goMonth(dir){state.m+=dir;if(state.m<0){state.m=11;state.y--}if(state.m>11){state.m=0;state.y++}monthTitle.classList.remove('swap');void monthTitle.offsetWidth;monthTitle.classList.add('swap');renderAll()}
+prevMonth.addEventListener('click',()=>goMonth(-1));
+nextMonth.addEventListener('click',()=>goMonth(1));
+todayBtn.addEventListener('click',()=>{const t=new Date();state.y=t.getFullYear();state.m=t.getMonth();state.sel=t;renderAll()});
+
+function bindSeg(id,cb){$(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));cb(b.dataset.v)})}
+bindSeg('#stTheme',v=>{settings.theme=v;saveSettings();applyTheme()});
+bindSeg('#stWeekStart',v=>{settings.weekStart=+v;saveSettings();renderAll()});
+bindSeg('#stSoundType',v=>{settings.soundType=v;saveSettings()});
+function renderAccentSwatches(){stAccent.innerHTML=ACCENTS.map(c=>`<div class="swatch ${c===settings.accent?'on':''}" data-c="${c}" style="--sw:${c};background:${c}"></div>`).join('')}
+stAccent.addEventListener('click',e=>{const s=e.target.closest('.swatch');if(!s)return;settings.accent=s.dataset.c;saveSettings();applyTheme();renderAccentSwatches()});
+function renderLeadChips(){stLeads.innerHTML=LEADS.map(([v,l])=>`<button class="chip-btn ${settings.leads.includes(v)?'on':''}" data-v="${v}">${l}</button>`).join('')}
+stLeads.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;const v=+b.dataset.v;settings.leads=settings.leads.includes(v)?settings.leads.filter(x=>x!==v):[...settings.leads,v];saveSettings();renderLeadChips()});
+stDefDur.addEventListener('change',()=>{settings.defaultDuration=+stDefDur.value;saveSettings()});
+stPopups.addEventListener('change',()=>{settings.popups=stPopups.checked;saveSettings()});
+stSticky.addEventListener('change',()=>{settings.sticky=stSticky.checked;saveSettings()});
+stSound.addEventListener('change',()=>{settings.sound=stSound.checked;saveSettings()});
+function updateBrowserUI(){const ok='Notification'in window;stBrowser.disabled=!ok||Notification.permission==='denied';stBrowser.checked=settings.browser&&ok&&Notification.permission==='granted';stBrowserStatus.textContent=!ok?'Не поддерживается':Notification.permission==='granted'?'Разрешено ✓':Notification.permission==='denied'?'Запрещено':'Будет запрошено'}
+stBrowser.addEventListener('change',()=>{if(stBrowser.checked){if(Notification.permission==='default')Notification.requestPermission().then(p=>{settings.browser=p==='granted';stBrowser.checked=settings.browser;saveSettings();updateBrowserUI()});else settings.browser=Notification.permission==='granted'}else settings.browser=false;saveSettings();updateBrowserUI()});
+stTest.addEventListener('click',()=>{if(settings.sound)playSound();if(settings.popups)showPopup({id:'test',title:'Тестовое событие',date:fmtDate(new Date()),time:fmtHM(new Date(Date.now()+15*60000)),allDay:false},'через 15 мин');if(settings.browser&&'Notification'in window&&Notification.permission==='granted')new Notification('Пульс · тест',{body:'Так выглядит системное уведомление'});if(!settings.popups&&!settings.sound&&!(settings.browser&&Notification.permission==='granted'))alert('Включите уведомления 🙂')});
+stExport.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({events,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pulse-backup.json';a.click();URL.revokeObjectURL(a.href)});
+stImport.addEventListener('click',()=>stImportFile.click());
+stImportFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.events))throw 0;if(confirm(`Импортировать ${data.events.length} ${plural(data.events.length,['событие','события','событий'])}?`)){events=data.events;if(data.settings)settings={...DEFAULTS,...data.settings};saveEvents();saveSettings();applyTheme();syncSettingsUI();renderAll()}}catch{alert('Не удалось прочитать файл')}e.target.value=''});
+stClear.addEventListener('click',()=>{if(confirm('Удалить все события?')){events=[];saveEvents();renderAll()}});
+function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;$$('#stSoundType button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.soundType));renderLeadChips();updateBrowserUI()}
+settingsBtn.addEventListener('click',()=>{syncSettingsUI();openModal(settingsModal)});
+
+let actx;
+document.addEventListener('pointerdown',()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}},{once:true});
+function playSound(){try{const ctx=actx||new(window.AudioContext||window.webkitAudioContext)();const notes=settings.soundType==='pulse'?[660,660,660]:[523.25,659.25,783.99];notes.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+i*.26;o.type=settings.soundType==='pulse'?'square':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.2,t+.03);g.gain.exponentialRampToValueAtTime(.0001,t+.24);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.25)})}catch(e){}}
+
+function leadsFor(ev){if(ev.notify==='off')return[];if(ev.notify==='default')return settings.leads;return[Number(ev.notify)]}
+function deliver(ev){const start=evStart(ev).getTime(),now=Date.now(),msLeft=start-now;const when=msLeft>60000?'через '+human(msLeft):(msLeft>0?'начинается':'уже идёт');if(settings.sound)playSound();if(settings.popups)showPopup(ev,when);if(settings.browser&&'Notification'in window&&Notification.permission==='granted'){const n=new Notification(`Скоро: ${ev.title}`,{body:`${ev.allDay?'весь день':'в '+ev.time} · ${when}`,tag:ev.id});n.onclick=()=>window.focus()}}
+function showPopup(ev,when){const t=document.createElement('div');t.className='toast';const[,mm]=ev.date.split('-');t.innerHTML=`<button class="close-x">✕</button><h4>🔔 ${esc(ev.title)}</h4><p>${+ev.date.split('-')[2]} ${MONTHS_GEN[+mm-1]} · ${ev.allDay?'весь день':ev.time} · <b>${when}</b></p><div class="toast-actions"><button class="mini-btn act-snz">Отложить 10 мин</button></div>`;toasts.prepend(t);while(toasts.children.length>3)toasts.lastChild.remove();let gone=false;const kill=()=>{if(gone)return;gone=true;t.classList.add('hide');setTimeout(()=>t.remove(),280)};t.querySelector('.close-x').onclick=kill;t.querySelector('.act-snz').onclick=()=>{snoozes.push({id:ev.id,at:Date.now()+10*60000});kill()};if(!settings.sticky)setTimeout(kill,45000)}
+function tick(){const now=Date.now();for(const ev of events){const start=evStart(ev).getTime();for(const lead of leadsFor(ev)){const key=ev.id+'@'+lead;if(!notified.has(key)&&now>=start-lead*60000&&now<start+5*60000){notified.set(key,now);deliver(ev)}}}snoozes=snoozes.filter(s=>{if(now>=s.at){const ev=events.find(x=>x.id===s.id);if(ev)deliver(ev);return false}return true});const cutoff=now-7*86400000;for(const[k,t]of notified)if(t<cutoff)notified.delete(k);saveNotified()}
+
+applyTheme();renderAll();tick();setInterval(tick,15000);
+
+// ── Регистрация service worker ──
+if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+
+// ── Генерация иконок PWA на лету (в кэш) ──
+(function generateIcons(){const sizes=[192,512];sizes.forEach(s=>{const c=document.createElement('canvas');c.width=s;c.height=s;const ctx=c.getContext('2d');ctx.fillStyle='#34d399';ctx.fillRect(0,0,s,s);ctx.fillStyle='#0a1310';ctx.strokeStyle='#0a1310';ctx.lineWidth=s*.05;ctx.lineCap='round';ctx.lineJoin='round';const scale=s/24*.7;ctx.save();ctx.translate(s*.15,s*.15);ctx.scale(scale,scale);ctx.beginPath();ctx.moveTo(2,12);ctx.lineTo(6,12);ctx.lineTo(9,4);ctx.lineTo(13,20);ctx.lineTo(16,12);ctx.lineTo(22,12);ctx.stroke();ctx.restore();c.toBlob(blob=>{if(blob){const url=URL.createObjectURL(blob);const link=document.createElement('link');link.rel='icon';link.sizes=s+'x'+s;link.href=url;if(s===192){const apple=document.querySelector('link[rel="apple-touch-icon"]');if(apple)apple.href=url}}})})})();
+</script>
+</body>
+</html>
