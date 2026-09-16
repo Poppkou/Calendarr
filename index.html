@@ -19,7 +19,7 @@
 :root{--accent:#34d399;--bg:#0d1017;--surface:#141824;--surface-2:#1a2030;--elev:#212a3e;--text:#eef1f8;--muted:#8d95ab;--border:rgba(255,255,255,.08);--danger:#fb7185;--r-lg:20px;--r-md:14px;--shadow:0 16px 40px rgba(0,0,0,.4);--fd:'Unbounded',system-ui,sans-serif;--fb:'Manrope',system-ui,sans-serif;--safe-top:env(safe-area-inset-top,0);--safe-bot:env(safe-area-inset-bottom,0)}
 [data-theme="light"]{--bg:#edf0f6;--surface:#ffffff;--surface-2:#f3f5fa;--elev:#ffffff;--text:#161b28;--muted:#67708a;--border:rgba(22,27,40,.09);--shadow:0 16px 40px rgba(35,45,90,.10)}
 html,body{overscroll-behavior:none;touch-action:manipulation}
-body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s;padding-top:var(--safe-top)}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s}
 body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1px);background-size:28px 28px}
 input[type=range]{accent-color:var(--accent)}
 .orb{position:fixed;border-radius:50%;filter:blur(100px);z-index:-1;pointer-events:none;opacity:.3}
@@ -28,15 +28,18 @@ input[type=range]{accent-color:var(--accent)}
 .orb-2{width:480px;height:480px;background:color-mix(in srgb,var(--accent) 30%,#6366f1);bottom:-160px;right:-120px;animation:drift2 30s ease-in-out infinite alternate}
 @keyframes drift1{to{transform:translate(70px,50px) scale(1.12)}}
 @keyframes drift2{to{transform:translate(-60px,-40px) scale(1.08)}}
-.topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr;gap:8px;align-items:center;padding:12px 16px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
-.brand{display:flex;align-items:center;gap:9px}
+/* нижняя панель управления (мобильные) */
+.topbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;flex-direction:column;gap:8px;padding:10px 12px calc(10px + var(--safe-bot));background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);box-shadow:0 -12px 30px rgba(0,0,0,.35)}
+.brand{display:none;align-items:center;gap:9px}
 .brand-mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center}
 .brand-text b{font-family:var(--fd);font-size:14px;font-weight:800;display:block}
 .brand-text span{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.6px;text-transform:uppercase}
-.month-nav{display:flex;align-items:center;gap:6px;justify-content:center;grid-column:1/-1}
-.month-title{font-family:var(--fd);font-size:17px;font-weight:800;min-width:160px;text-align:center}
-.month-title.swap{animation:swap .35s ease}
+.dock{display:flex;flex-direction:column;gap:8px}
+.month-nav{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px}
+.month-title{display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--fd);font-size:16px;font-weight:800;min-width:0}
+#monthTitle.swap{animation:swap .35s ease}
 @keyframes swap{from{opacity:0;transform:translateX(14px)}}
+.mini-mark{width:22px;height:22px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none}
 .btn{font:inherit;font-weight:800;border:none;cursor:pointer;border-radius:11px;padding:9px 14px;display:inline-flex;align-items:center;gap:7px;transition:.2s;color:var(--text)}
 .btn-primary{background:var(--accent);color:#0a1310}
 .btn-ghost{background:var(--surface-2);border:1px solid var(--border)}
@@ -44,9 +47,9 @@ input[type=range]{accent-color:var(--accent)}
 .icon-btn{width:40px;height:40px;flex:none;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;transition:.2s;font:inherit}
 .icon-btn:hover{color:var(--text)}
 .icon-btn.sm{width:32px;height:32px;border-radius:9px}
-.actionbar{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--safe-bot));z-index:70;display:flex;gap:8px;align-items:center;justify-content:space-between;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:18px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.actionbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
 .actionbar .btn-primary{flex:1;justify-content:center;padding:13px 10px}
-.layout{max-width:1100px;margin:0 auto;padding:14px 14px 104px}
+.layout{max-width:1100px;margin:0 auto;padding:calc(14px + var(--safe-top)) 14px 158px}
 .calendar-card,.day-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
 .day-panel{margin-top:14px}
 .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:7px}
@@ -142,9 +145,12 @@ textarea{resize:vertical;min-height:60px}
 .toast-progress{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--tc,var(--accent));transform-origin:left;animation:shrink linear forwards}
 @keyframes shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (min-width:700px){
-  .topbar{grid-template-columns:1fr auto 1fr;padding:13px 24px}
-  .month-nav{grid-column:auto}
-  .actionbar{position:static;background:none;border:none;box-shadow:none;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0;justify-content:flex-end}
+  .topbar{position:sticky;top:0;bottom:auto;flex-direction:row;align-items:center;justify-content:space-between;gap:14px;padding:13px 24px;background:color-mix(in srgb,var(--bg) 72%,transparent);border-top:none;border-bottom:1px solid var(--border);box-shadow:none}
+  .brand{display:flex}
+  .dock{display:contents}
+  .mini-mark{display:none}
+  .month-title{font-size:22px}
+  .actionbar{justify-content:flex-end}
   .actionbar .btn-primary{flex:none;padding:9px 14px}
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:20px}
   .day-panel{margin-top:0;position:sticky;top:100px}
@@ -160,15 +166,17 @@ textarea{resize:vertical;min-height:60px}
     <div class="brand-mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0a1310" stroke-width="2.4" stroke-linecap="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div>
     <div class="brand-text"><b>Пульс</b><span>календарь</span></div>
   </div>
-  <nav class="month-nav">
-    <button class="icon-btn" id="prevMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div class="month-title" id="monthTitle"></div>
-    <button class="icon-btn" id="nextMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
-  </nav>
-  <div class="actionbar">
-    <button class="icon-btn" id="settingsBtn" title="Настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-    <button class="btn btn-primary" id="addEventBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Событие</button>
-    <button class="btn btn-ghost" id="todayBtn">Сегодня</button>
+  <div class="dock">
+    <nav class="month-nav">
+      <button class="icon-btn" id="prevMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="month-title"><span class="mini-mark"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#0a1310" stroke-width="2.6" stroke-linecap="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></span><span id="monthTitle"></span></div>
+      <button class="icon-btn" id="nextMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </nav>
+    <div class="actionbar">
+      <button class="icon-btn" id="settingsBtn" title="Настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <button class="btn btn-primary" id="addEventBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Событие</button>
+      <button class="btn btn-ghost" id="todayBtn">Сегодня</button>
+    </div>
   </div>
 </header>
 <main class="layout">
@@ -257,6 +265,7 @@ textarea{resize:vertical;min-height:60px}
         </div>
       </div>
       <div class="set-row"><div class="set-txt"><b>Длительность звука</b><small id="stDurLabel"></small></div><input type="range" id="stSoundDur" min="0.5" max="5" step="0.5" style="width:160px"></div>
+      <div class="set-row"><div class="set-txt"><b>Громкость звука</b><small id="stVolLabel"></small></div><input type="range" id="stSoundVol" min="0" max="150" step="10" style="width:160px"></div>
       <div class="set-row"><div class="set-txt"><b>Вибрация</b></div><label class="switch"><input type="checkbox" id="stVibrate"><span class="track"></span><span class="thumb"></span></label></div>
       <div class="set-row"><div class="set-txt"><b>Системные уведомления (шторка)</b><small id="stBrowserStatus"></small></div><label class="switch"><input type="checkbox" id="stBrowser"><span class="track"></span><span class="thumb"></span></label></div>
       <div class="set-row"><div class="set-txt"><b>Тест</b><small>Попап + звук + шторка</small></div><button class="btn btn-ghost" id="stTest">🔔 Тест</button></div>
@@ -281,7 +290,7 @@ const EVENT_COLORS=[['#f87171','Красный'],['#fb923c','Оранжевый'
 const ACCENTS=['#34d399','#38bdf8','#a78bfa','#fb7185','#fbbf24'];
 const DUR=[15,30,45,60,90,120,180,240];
 const LEADS=[[0,'В момент события'],[5,'За 5 мин'],[10,'За 10 мин'],[15,'За 15 мин'],[30,'За 30 мин'],[60,'За 1 час'],[120,'За 2 часа'],[1440,'За 1 день']];
-const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,vibrate:true};
+const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,soundVol:100,vibrate:true};
 const fmtDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const fmtHM=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const uid=()=>'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -338,7 +347,7 @@ function renderPanel(){
   panelDate.textContent=d.getDate();
   panelSub.textContent=`${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
   const evs=byDate(fmtDate(d));
-  if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие»</small></div>`}
+  if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие» внизу</small></div>`}
   else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=evStart(e).getTime(),en=evEnd(e).getTime();const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=evEnd(e);const plus=fmtDate(ed)!==e.date?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить событие">✕</button></div>`}).join('')}
   const mEvs=events.filter(e=>{const[y,m]=e.date.split('-').map(Number);return y===state.y&&m===state.m+1});
   const mins=mEvs.reduce((a,e)=>a+(e.duration||0),0);
@@ -419,27 +428,40 @@ stSticky.addEventListener('change',()=>{settings.sticky=stSticky.checked;saveSet
 stSound.addEventListener('change',()=>{settings.sound=stSound.checked;saveSettings()});
 stVibrate.addEventListener('change',()=>{settings.vibrate=stVibrate.checked;saveSettings()});
 
-/* ── звуковой движок: 8 мелодий + регулировка длительности ── */
-function tone(ctx,t,f,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+len+.02)}
-function sweep(ctx,t,f1,f2,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+len+.02)}
+/* ── звуковой движок: 8 мелодий, длительность и громкость ── */
+function tone(ctx,dest,t,f,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
+function sweep(ctx,dest,t,f1,f2,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
 const SOUNDS={
-  chime:{name:'Перезвон',gen:(c,t,d)=>{const s=[523.25,659.25,783.99,1046.5];let i=0;for(let x=t;x<t+d-.2;x+=.3)tone(c,x,s[i++%4],'sine',.34,.22)}},
-  pulse:{name:'Импульс',gen:(c,t,d)=>{for(let x=t;x<t+d-.1;x+=.22)tone(c,x,660,'square',.12,.16)}},
-  bell:{name:'Колокол',gen:(c,t,d)=>{for(let x=t;x<t+d-.5;x+=.6){tone(c,x,880,'sine',.55,.2);tone(c,x,1760,'sine',.4,.08);tone(c,x,2637,'sine',.25,.04)}}},
-  marimba:{name:'Маримба',gen:(c,t,d)=>{const s=[392,440,494,587,659];let i=0;for(let x=t;x<t+d-.15;x+=.18)tone(c,x,s[i++%5],'triangle',.16,.24)}},
-  laser:{name:'Лазер',gen:(c,t,d)=>{for(let x=t;x<t+d-.3;x+=.35)sweep(c,x,1200,180,'sawtooth',.3,.18)}},
-  alarm:{name:'Будильник',gen:(c,t,d)=>{let i=0;for(let x=t;x<t+d-.12;x+=.14)tone(c,x,i++%2?880:740,'square',.12,.15)}},
-  soft:{name:'Нежный',gen:(c,t,d)=>{const s=[440,554.37,659.25];let i=0;for(let x=t;x<t+d-.4;x+=.45)tone(c,x,s[i++%3],'triangle',.5,.18)}},
-  coin:{name:'Монетка',gen:(c,t,d)=>{for(let x=t;x<t+d-.25;x+=.3){sweep(c,x,987,1318,'square',.09,.15);tone(c,x+.09,1318,'square',.18,.15)}}}
+  chime:{name:'Перезвон',gen:(c,g,t,d)=>{const s=[523.25,659.25,783.99,1046.5];let i=0;for(let x=t;x<t+d-.2;x+=.3)tone(c,g,x,s[i++%4],'sine',.34,.22)}},
+  pulse:{name:'Импульс',gen:(c,g,t,d)=>{for(let x=t;x<t+d-.1;x+=.22)tone(c,g,x,660,'square',.12,.16)}},
+  bell:{name:'Колокол',gen:(c,g,t,d)=>{for(let x=t;x<t+d-.5;x+=.6){tone(c,g,x,880,'sine',.55,.2);tone(c,g,x,1760,'sine',.4,.08);tone(c,g,x,2637,'sine',.25,.04)}}},
+  marimba:{name:'Маримба',gen:(c,g,t,d)=>{const s=[392,440,494,587,659];let i=0;for(let x=t;x<t+d-.15;x+=.18)tone(c,g,x,s[i++%5],'triangle',.16,.24)}},
+  laser:{name:'Лазер',gen:(c,g,t,d)=>{for(let x=t;x<t+d-.3;x+=.35)sweep(c,g,x,1200,180,'sawtooth',.3,.18)}},
+  alarm:{name:'Будильник',gen:(c,g,t,d)=>{let i=0;for(let x=t;x<t+d-.12;x+=.14)tone(c,g,x,i++%2?880:740,'square',.12,.15)}},
+  soft:{name:'Нежный',gen:(c,g,t,d)=>{const s=[440,554.37,659.25];let i=0;for(let x=t;x<t+d-.4;x+=.45)tone(c,g,x,s[i++%3],'triangle',.5,.18)}},
+  coin:{name:'Монетка',gen:(c,g,t,d)=>{for(let x=t;x<t+d-.25;x+=.3){sweep(c,g,x,987,1318,'square',.09,.15);tone(c,g,x+.09,1318,'square',.18,.15)}}}
 };
 function renderSoundChips(){stSoundType.innerHTML=Object.entries(SOUNDS).map(([k,v])=>`<button class="chip-btn ${settings.soundType===k?'on':''}" data-v="${k}">${v.name}</button>`).join('')}
 stSoundType.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;settings.soundType=b.dataset.v;saveSettings();renderSoundChips();playSound()});
 stSoundDur.addEventListener('input',()=>{settings.soundDur=+stSoundDur.value;stDurLabel.textContent=settings.soundDur+' сек';saveSettings()});
 stSoundDur.addEventListener('change',()=>playSound());
+stSoundVol.addEventListener('input',()=>{settings.soundVol=+stSoundVol.value;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';saveSettings()});
+stSoundVol.addEventListener('change',()=>playSound());
 
 let actx;
 document.addEventListener('pointerdown',()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}},{once:true});
-function playSound(){try{const ctx=actx||new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();const p=SOUNDS[settings.soundType]||SOUNDS.chime;const d=Math.min(6,Math.max(.5,settings.soundDur||1.5));p.gen(ctx,ctx.currentTime+.02,d)}catch(e){}}
+function playSound(){
+  try{
+    const ctx=actx||new(window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended')ctx.resume();
+    const master=ctx.createGain();
+    master.gain.value=Math.min(1.5,Math.max(0,(settings.soundVol??100)/100));
+    master.connect(ctx.destination);
+    const p=SOUNDS[settings.soundType]||SOUNDS.chime;
+    const d=Math.min(6,Math.max(.5,settings.soundDur||1.5));
+    p.gen(ctx,master,ctx.currentTime+.02,d);
+  }catch(e){}
+}
 
 function updateBrowserUI(){const ok='Notification'in window;stBrowser.disabled=!ok||Notification.permission==='denied';stBrowser.checked=settings.browser&&ok&&Notification.permission==='granted';stBrowserStatus.textContent=!ok?'Не поддерживается':Notification.permission==='granted'?'Разрешено ✓':Notification.permission==='denied'?'Запрещено':'Будет запрошено'}
 stBrowser.addEventListener('change',()=>{if(stBrowser.checked){if(Notification.permission==='default')Notification.requestPermission().then(p=>{settings.browser=p==='granted';stBrowser.checked=settings.browser;saveSettings();updateBrowserUI()});else settings.browser=Notification.permission==='granted'}else settings.browser=false;saveSettings();updateBrowserUI()});
@@ -455,13 +477,11 @@ stExport.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({even
 stImport.addEventListener('click',()=>stImportFile.click());
 stImportFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.events))throw 0;if(confirm(`Импортировать ${data.events.length} ${plural(data.events.length,['событие','события','событий'])}?`)){events=data.events;if(data.settings)settings={...DEFAULTS,...data.settings};saveEvents();saveSettings();applyTheme();syncSettingsUI();renderAll()}}catch{alert('Не удалось прочитать файл')}e.target.value=''});
 stClear.addEventListener('click',()=>{if(confirm('Удалить все события?')){events=[];saveEvents();renderAll()}});
-function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';renderLeadChips();updateBrowserUI()}
+function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';stSoundVol.value=settings.soundVol;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';renderLeadChips();updateBrowserUI()}
 settingsBtn.addEventListener('click',()=>{syncSettingsUI();openModal(settingsModal)});
 
-/* ── бейдж на иконке (главный экран) ── */
 function updateBadge(){const now=Date.now(),day=now+86400000;const n=events.filter(e=>{const t=evStart(e).getTime();return t>=now-3600000&&t<day}).length;try{if(n&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}}
 
-/* ── уведомления: попап + шторка ── */
 function leadsFor(ev){if(ev.notify==='off')return[];if(ev.notify==='default')return settings.leads;return[Number(ev.notify)]}
 async function systemNotify(ev,when){
   if(!(settings.browser&&'Notification'in window&&Notification.permission==='granted'))return;
@@ -497,7 +517,6 @@ function showPopup(ev,when){
 }
 function selectDay(d){state.sel=d;state.y=d.getFullYear();state.m=d.getMonth();renderAll()}
 
-/* ── кнопки уведомлений в шторке ── */
 if(navigator.serviceWorker){navigator.serviceWorker.addEventListener('message',e=>{
   const d=e.data||{};
   if(d.type==='snooze'){snoozes.push({id:d.id,at:Date.now()+600000});saveSnoozes()}
@@ -520,7 +539,6 @@ function tick(){
   saveNotified();updateBadge();
 }
 
-/* ── параметры из уведомления шторки (?open= / ?snooze=) ── */
 (function(){
   const q=new URLSearchParams(location.search);
   const sn=q.get('snooze');
@@ -535,4 +553,4 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
 </body>
-</html>
+  </html>
