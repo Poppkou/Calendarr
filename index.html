@@ -28,7 +28,6 @@ input[type=range]{accent-color:var(--accent)}
 .orb-2{width:480px;height:480px;background:color-mix(in srgb,var(--accent) 30%,#6366f1);bottom:-160px;right:-120px;animation:drift2 30s ease-in-out infinite alternate}
 @keyframes drift1{to{transform:translate(70px,50px) scale(1.12)}}
 @keyframes drift2{to{transform:translate(-60px,-40px) scale(1.08)}}
-/* нижняя панель управления (мобильные) */
 .topbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;flex-direction:column;gap:8px;padding:10px 12px calc(10px + var(--safe-bot));background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border);box-shadow:0 -12px 30px rgba(0,0,0,.35)}
 .brand{display:none;align-items:center;gap:9px}
 .brand-mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center}
@@ -76,6 +75,7 @@ input[type=range]{accent-color:var(--accent)}
 .ev-body{min-width:0;flex:1}
 .ev-body b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.rep{color:var(--accent);font-weight:800}
 .ev-del{flex:none;width:28px;height:28px;border-radius:9px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s}
 .ev-del:hover,.ev-del:active{background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger)}
 .live{color:var(--accent);font-weight:800}
@@ -213,6 +213,16 @@ textarea{resize:vertical;min-height:60px}
       <div class="chips-wrap" id="durChips"></div>
       <div class="hint" id="endHint"></div>
     </div>
+    <div class="field">
+      <span class="lbl">Повторение</span>
+      <select id="evRepeat">
+        <option value="none">Не повторять</option>
+        <option value="daily">Каждый день</option>
+        <option value="weekdays">По будням (Пн–Пт)</option>
+        <option value="weekly">Каждую неделю</option>
+        <option value="monthly">Каждый месяц</option>
+      </select>
+    </div>
     <div class="field"><span class="lbl">Цвет</span><div class="swatches" id="evColors"></div></div>
     <div class="field">
       <span class="lbl">Уведомление</span>
@@ -271,6 +281,12 @@ textarea{resize:vertical;min-height:60px}
       <div class="set-row"><div class="set-txt"><b>Тест</b><small>Попап + звук + шторка</small></div><button class="btn btn-ghost" id="stTest">🔔 Тест</button></div>
     </div>
     <div class="set-section">
+      <h5>Push-сервер (закрытое приложение)</h5>
+      <div class="set-row col"><div class="set-txt"><b>Адрес сервера</b><small>URL воркера Cloudflare из инструкции</small></div><input type="text" id="stPushUrl" placeholder="https://pulse-push.имя.workers.dev"></div>
+      <div class="set-row"><div class="set-txt"><b>Статус</b><small id="stPushStatus">Не подключено</small></div>
+        <div class="data-btns"><button class="btn btn-ghost" id="stPushConnect">Подключить</button><button class="btn btn-ghost" id="stPushDisconnect">Отключить</button><button class="btn btn-ghost" id="stPushTest">Тест</button></div></div>
+    </div>
+    <div class="set-section">
       <h5>Данные</h5>
       <div class="set-row"><div class="set-txt"><b>Резервная копия</b></div><div class="data-btns"><button class="btn btn-ghost" id="stExport">Экспорт</button><button class="btn btn-ghost" id="stImport">Импорт</button><input type="file" id="stImportFile" accept=".json" hidden><button class="btn btn-danger" id="stClear">Очистить</button></div></div>
     </div>
@@ -286,11 +302,12 @@ const MONTHS=['Январь','Февраль','Март','Апрель','Май'
 const MONTHS_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const WD=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const WD_FULL=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const REP_LABEL={none:'',daily:'каждый день',weekdays:'по будням',weekly:'каждую неделю',monthly:'каждый месяц'};
 const EVENT_COLORS=[['#f87171','Красный'],['#fb923c','Оранжевый'],['#fbbf24','Жёлтый'],['#34d399','Зелёный'],['#38bdf8','Голубой'],['#818cf8','Индиго'],['#e879f9','Розовый'],['#94a3b8','Серый']];
 const ACCENTS=['#34d399','#38bdf8','#a78bfa','#fb7185','#fbbf24'];
 const DUR=[15,30,45,60,90,120,180,240];
 const LEADS=[[0,'В момент события'],[5,'За 5 мин'],[10,'За 10 мин'],[15,'За 15 мин'],[30,'За 30 мин'],[60,'За 1 час'],[120,'За 2 часа'],[1440,'За 1 день']];
-const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,soundVol:100,vibrate:true};
+const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,soundVol:100,vibrate:true,pushUrl:''};
 const fmtDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const fmtHM=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const uid=()=>'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -309,11 +326,27 @@ const saveNotified=()=>store.set('pulse.notified',Object.fromEntries(notified));
 const saveSnoozes=()=>store.set('pulse.snoozes',snoozes);
 const today=new Date();
 const state={y:today.getFullYear(),m:today.getMonth(),sel:today};
+let pushSubscribed=false;
 
 function applyTheme(){const dark=settings.theme==='dark'||(settings.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.setProperty('--accent',settings.accent);document.querySelector('meta[name="theme-color"]').setAttribute('content',dark?'#141824':'#ffffff')}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>settings.theme==='auto'&&applyTheme());
-const byDate=ds=>events.filter(e=>e.date===ds).sort((a,b)=>(a.allDay?0:1)-(b.allDay?0:1)||(a.time||'').localeCompare(b.time||''));
-const evStart=e=>{const[y,m,d]=e.date.split('-').map(Number);if(e.allDay||!e.time)return new Date(y,m-1,d);const[h,mi]=e.time.split(':').map(Number);return new Date(y,m-1,d,h,mi)};
+
+/* ── повторения: попадает ли событие на дату ds ── */
+function occursOn(ev,ds){
+  if(!ev.date||ds<ev.date)return false;
+  if(!ev.repeat||ev.repeat==='none')return ds===ev.date;
+  const[y,m,d]=ev.date.split('-').map(Number);
+  const[Y,M,D]=ds.split('-').map(Number);
+  const cur=new Date(Y,M-1,D);
+  if(ev.repeat==='daily')return true;
+  if(ev.repeat==='weekdays'){const wd=cur.getDay();return wd>=1&&wd<=5}
+  if(ev.repeat==='weekly')return cur.getDay()===new Date(y,m-1,d).getDay();
+  if(ev.repeat==='monthly')return D===d;
+  return false;
+}
+function occStartOn(ev,ds){const[Y,M,D]=ds.split('-').map(Number);if(ev.allDay||!ev.time)return new Date(Y,M-1,D);const[h,mi]=ev.time.split(':').map(Number);return new Date(Y,M-1,D,h,mi)}
+const byDate=ds=>events.filter(e=>occursOn(e,ds)).sort((a,b)=>(a.allDay?0:1)-(b.allDay?0:1)||(a.time||'').localeCompare(b.time||''));
+const evStart=e=>occStartOn(e,e.date);
 const evEnd=e=>new Date(evStart(e).getTime()+(e.duration||0)*60000);
 
 function renderCalendar(){
@@ -348,18 +381,20 @@ function renderPanel(){
   panelSub.textContent=`${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
   const evs=byDate(fmtDate(d));
   if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие» внизу</small></div>`}
-  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=evStart(e).getTime(),en=evEnd(e).getTime();const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=evEnd(e);const plus=fmtDate(ed)!==e.date?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить событие">✕</button></div>`}).join('')}
+  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=occStartOn(e,fmtDate(d)).getTime(),en=s+(e.duration||0)*60000;const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=new Date(en);const plus=fmtDate(ed)!==fmtDate(d)?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}const rep=e.repeat&&e.repeat!=='none'?` · <span class="rep">⟳ ${REP_LABEL[e.repeat]}</span>`:'';return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${rep}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить">✕</button></div>`}).join('')}
   const mEvs=events.filter(e=>{const[y,m]=e.date.split('-').map(Number);return y===state.y&&m===state.m+1});
   const mins=mEvs.reduce((a,e)=>a+(e.duration||0),0);
   panelFoot.textContent=`${MONTHS_GEN[state.m]}: ${mEvs.length} ${plural(mEvs.length,['событие','события','событий'])}${mins?` · ${durLabel(mins)}`:''}`;
 }
 eventsList.addEventListener('click',e=>{
   const del=e.target.closest('.ev-del');
-  if(del){const id=del.dataset.del;const ev=events.find(x=>x.id===id);if(ev&&confirm(`Удалить событие «${ev.title}»?`)){events=events.filter(x=>x.id!==id);saveEvents();renderAll()}return}
+  if(del){const id=del.dataset.del;const ev=events.find(x=>x.id===id);
+    const msg=ev&&ev.repeat&&ev.repeat!=='none'?`Удалить «${ev.title}» и ВСЕ его повторы?`:`Удалить событие «${ev.title}»?`;
+    if(ev&&confirm(msg)){events=events.filter(x=>x.id!==id);saveEvents();renderAll()}return}
   const it=e.target.closest('.ev-item');if(!it)return;
   const ev=events.find(x=>x.id===it.dataset.id);if(ev)openEventModal(ev);
 });
-function renderAll(){renderCalendar();renderPanel();updateBadge()}
+function renderAll(){renderCalendar();renderPanel();updateBadge();scheduleSync()}
 
 const openModal=m=>m.classList.add('open');
 const closeModal=m=>m.classList.remove('open');
@@ -389,6 +424,7 @@ function openEventModal(ev){
   evAllDay.checked=ev?!!ev.allDay:false;
   evTime.value=ev&&ev.time?ev.time:'18:00';
   setDuration(ev?ev.duration:settings.defaultDuration);
+  evRepeat.value=ev&&ev.repeat?ev.repeat:'none';
   chosenColor=ev?ev.color:EVENT_COLORS[3][0];renderSwatches();
   evNotify.value=ev?String(ev.notify):'default';
   evNotes.value=ev?ev.notes||'':'';
@@ -401,12 +437,17 @@ eventForm.addEventListener('submit',e=>{
   e.preventDefault();
   const title=evTitle.value.trim();if(!title)return;
   const allDay=evAllDay.checked;
-  const data={title,date:evDate.value||fmtDate(new Date()),allDay,time:allDay?null:(evTime.value||'09:00'),duration:allDay?0:Math.max(5,(+evDurH.value||0)*60+(+evDurM.value||0)),color:chosenColor,notify:evNotify.value,notes:evNotes.value.trim()};
+  const data={title,date:evDate.value||fmtDate(new Date()),allDay,time:allDay?null:(evTime.value||'09:00'),duration:allDay?0:Math.max(5,(+evDurH.value||0)*60+(+evDurM.value||0)),repeat:evRepeat.value,color:chosenColor,notify:evNotify.value,notes:evNotes.value.trim()};
   if(editingId)Object.assign(events.find(x=>x.id===editingId),data);
   else events.push({id:uid(),createdAt:Date.now(),...data});
   saveEvents();closeModal(eventModal);renderAll();
 });
-evDelete.addEventListener('click',()=>{if(!confirm('Удалить событие?'))return;events=events.filter(x=>x.id!==editingId);saveEvents();closeModal(eventModal);renderAll()});
+evDelete.addEventListener('click',()=>{
+  const ev=events.find(x=>x.id===editingId);
+  const msg=ev&&ev.repeat&&ev.repeat!=='none'?`Удалить «${ev.title}» и ВСЕ его повторы?`:'Удалить событие?';
+  if(!confirm(msg))return;
+  events=events.filter(x=>x.id!==editingId);saveEvents();closeModal(eventModal);renderAll();
+});
 addEventBtn.addEventListener('click',()=>openEventModal(null));
 panelAddBtn.addEventListener('click',()=>openEventModal(null));
 
@@ -421,14 +462,13 @@ bindSeg('#stWeekStart',v=>{settings.weekStart=+v;saveSettings();renderAll()});
 function renderAccentSwatches(){stAccent.innerHTML=ACCENTS.map(c=>`<div class="swatch ${c===settings.accent?'on':''}" data-c="${c}" style="--sw:${c};background:${c}"></div>`).join('')}
 stAccent.addEventListener('click',e=>{const s=e.target.closest('.swatch');if(!s)return;settings.accent=s.dataset.c;saveSettings();applyTheme();renderAccentSwatches()});
 function renderLeadChips(){stLeads.innerHTML=LEADS.map(([v,l])=>`<button class="chip-btn ${settings.leads.includes(v)?'on':''}" data-v="${v}">${l}</button>`).join('')}
-stLeads.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;const v=+b.dataset.v;settings.leads=settings.leads.includes(v)?settings.leads.filter(x=>x!==v):[...settings.leads,v];saveSettings();renderLeadChips()});
+stLeads.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;const v=+b.dataset.v;settings.leads=settings.leads.includes(v)?settings.leads.filter(x=>x!==v):[...settings.leads,v];saveSettings();renderLeadChips();scheduleSync()});
 stDefDur.addEventListener('change',()=>{settings.defaultDuration=+stDefDur.value;saveSettings()});
 stPopups.addEventListener('change',()=>{settings.popups=stPopups.checked;saveSettings()});
 stSticky.addEventListener('change',()=>{settings.sticky=stSticky.checked;saveSettings()});
 stSound.addEventListener('change',()=>{settings.sound=stSound.checked;saveSettings()});
 stVibrate.addEventListener('change',()=>{settings.vibrate=stVibrate.checked;saveSettings()});
 
-/* ── звуковой движок: 8 мелодий, длительность и громкость ── */
 function tone(ctx,dest,t,f,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
 function sweep(ctx,dest,t,f1,f2,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
 const SOUNDS={
@@ -469,39 +509,104 @@ stTest.addEventListener('click',()=>{
   const test={id:'test',title:'Тестовое событие',date:fmtDate(new Date()),time:fmtHM(new Date(Date.now()+15*60000)),allDay:false,color:'#38bdf8'};
   if(settings.sound)playSound();
   if(settings.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180]);
-  if(settings.popups)showPopup(test,'через 15 мин');
-  systemNotify(test,'через 15 мин');
+  if(settings.popups)showPopup(test,'через 15 мин',fmtDate(new Date()));
+  systemNotify(test,'через 15 мин',fmtDate(new Date()));
   if(!settings.popups&&!settings.sound&&!(settings.browser&&'Notification'in window&&Notification.permission==='granted'))alert('Включите уведомления 🙂');
 });
 stExport.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({events,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pulse-backup.json';a.click();URL.revokeObjectURL(a.href)});
 stImport.addEventListener('click',()=>stImportFile.click());
 stImportFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.events))throw 0;if(confirm(`Импортировать ${data.events.length} ${plural(data.events.length,['событие','события','событий'])}?`)){events=data.events;if(data.settings)settings={...DEFAULTS,...data.settings};saveEvents();saveSettings();applyTheme();syncSettingsUI();renderAll()}}catch{alert('Не удалось прочитать файл')}e.target.value=''});
 stClear.addEventListener('click',()=>{if(confirm('Удалить все события?')){events=[];saveEvents();renderAll()}});
-function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';stSoundVol.value=settings.soundVol;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';renderLeadChips();updateBrowserUI()}
+function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';stSoundVol.value=settings.soundVol;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';renderLeadChips();updateBrowserUI();stPushUrl.value=settings.pushUrl||'';updatePushUI()}
 settingsBtn.addEventListener('click',()=>{syncSettingsUI();openModal(settingsModal)});
 
-function updateBadge(){const now=Date.now(),day=now+86400000;const n=events.filter(e=>{const t=evStart(e).getTime();return t>=now-3600000&&t<day}).length;try{if(n&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}}
+function updateBadge(){const now=Date.now();let n=0;const ds1=fmtDate(new Date(now-3600000)),ds2=fmtDate(new Date(now+86400000));for(const ev of events){for(const ds of[ds1,ds2]){if(!occursOn(ev,ds))continue;const t=occStartOn(ev,ds).getTime();if(t>=now-3600000&&t<now+86400000)n++}}try{if(n&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}}
+
+/* ── PUSH: подключение и синхронизация расписания ── */
+function urlB64ToU8(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+const shortLead=m=>m<60?m+' мин':m<1440?durLabel(m):'1 день';
+function buildSchedule(){
+  const now=Date.now(),pushes=[];
+  const d0=new Date(now-3600000);
+  for(const ev of events){
+    const leads=leadsFor(ev);if(!leads.length)continue;
+    for(let i=0;i<11;i++){
+      const dd=new Date(d0.getFullYear(),d0.getMonth(),d0.getDate()+i);
+      const ds=fmtDate(dd);
+      if(!occursOn(ev,ds))continue;
+      const start=occStartOn(ev,ds).getTime();
+      for(const lead of leads){
+        const fireAt=start-lead*60000;
+        if(fireAt<now-300000||fireAt>now+10*86400000)continue;
+        pushes.push({key:ev.id+'@'+ds+'@'+lead,fireAt,title:ev.title,body:`${ev.allDay?'весь день':'в '+ev.time} · ${lead===0?'начинается сейчас':'напоминание '+shortLead(lead)}`,date:ds,id:ev.id});
+      }
+    }
+  }
+  return pushes;
+}
+let syncTimer=null;
+function scheduleSync(){if(!settings.pushUrl||!pushSubscribed)return;clearTimeout(syncTimer);syncTimer=setTimeout(syncPush,3000)}
+async function syncPush(){
+  if(!settings.pushUrl)return;
+  try{await fetch(settings.pushUrl+'/sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pushes:buildSchedule(),serverUrl:settings.pushUrl})})}catch(e){}
+}
+async function refreshPushState(){
+  try{const reg=await navigator.serviceWorker.ready;const sub=reg?await reg.pushManager.getSubscription():null;pushSubscribed=!!(sub&&settings.pushUrl)}catch(e){pushSubscribed=false}
+}
+async function updatePushUI(){
+  await refreshPushState();
+  stPushStatus.textContent=pushSubscribed?`Подключено · ${settings.pushUrl.replace('https://','')}`:(settings.pushUrl?'Подписка не найдена — нажмите «Подключить»':'Сервер не указан');
+}
+stPushUrl.addEventListener('change',()=>{settings.pushUrl=stPushUrl.value.trim().replace(/\/+$/,'');saveSettings();updatePushUI()});
+stPushConnect.addEventListener('click',async()=>{
+  const url=(stPushUrl.value||settings.pushUrl||'').trim().replace(/\/+$/,'');
+  if(!url)return alert('Сначала вставьте адрес сервера');
+  if(!('Notification'in window))return alert('Браузер не поддерживает уведомления');
+  if(Notification.permission!=='granted'){const p=await Notification.requestPermission();if(p!=='granted')return alert('Нет разрешения на уведомления')}
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const{publicKey}=await(await fetch(url+'/vapid')).json();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToU8(publicKey)});
+    await fetch(url+'/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(sub.toJSON())});
+    settings.pushUrl=url;saveSettings();
+    await syncPush();await updatePushUI();
+    alert('Готово! Push-уведомления подключены 🎉');
+  }catch(e){alert('Не удалось подключиться: '+e.message)}
+});
+stPushDisconnect.addEventListener('click',async()=>{
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){try{await fetch(settings.pushUrl+'/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint})})}catch(e){}await sub.unsubscribe()}
+  }catch(e){}
+  await updatePushUI();
+});
+stPushTest.addEventListener('click',async()=>{
+  if(!settings.pushUrl)return alert('Сначала подключите сервер');
+  try{const r=await(await fetch(settings.pushUrl+'/test',{method:'POST'})).json();alert(`Отправлено: ${r.sent} из ${r.subs} подписок`)}catch(e){alert('Ошибка: '+e.message)}
+});
 
 function leadsFor(ev){if(ev.notify==='off')return[];if(ev.notify==='default')return settings.leads;return[Number(ev.notify)]}
-async function systemNotify(ev,when){
+async function systemNotify(ev,when,ds){
   if(!(settings.browser&&'Notification'in window&&Notification.permission==='granted'))return;
-  const opts={body:`${ev.allDay?'весь день':'в '+ev.time} · ${when}`,icon:'icon-192.png',badge:'icon-192.png',tag:'pulse-'+ev.id,requireInteraction:!!settings.sticky,data:{id:ev.id,date:ev.date},actions:[{action:'open',title:'Открыть'},{action:'snooze',title:'Отложить 10 мин'}]};
+  const opts={body:`${ev.allDay?'весь день':'в '+ev.time} · ${when}`,icon:'icon-192.png',badge:'icon-192.png',tag:'pulse-'+ev.id+'-'+ds,requireInteraction:!!settings.sticky,data:{id:ev.id,date:ds},actions:[{action:'open',title:'Открыть'},{action:'snooze',title:'Отложить 10 мин'}]};
   if(settings.vibrate)opts.vibrate=[200,100,200];
   try{const reg=await navigator.serviceWorker.ready;await reg.showNotification(ev.title,opts)}
   catch(e){try{new Notification(ev.title,opts)}catch(e2){}}
 }
-function deliver(ev){
-  const start=evStart(ev).getTime(),now=Date.now(),msLeft=start-now;
+function deliver(ev,msLeft,ds){
+  if(pushSubscribed&&document.visibilityState!=='visible')return; // приложение скрыто — push сам покажет
   const when=msLeft>60000?'через '+human(msLeft):(msLeft>0?'начинается':'уже идёт');
   if(settings.sound)playSound();
   if(settings.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180]);
-  if(settings.popups)showPopup(ev,when);
-  systemNotify(ev,when);
+  if(settings.popups)showPopup(ev,when,ds);
+  systemNotify(ev,when,ds);
 }
-function showPopup(ev,when){
+function showPopup(ev,when,ds){
   const t=document.createElement('div');t.className='toast';t.style.setProperty('--tc',ev.color||'var(--accent)');
-  const[,mm]=ev.date.split('-');
-  const meta=`${+ev.date.split('-')[2]} ${MONTHS_GEN[+mm-1]} · ${ev.allDay?'весь день':ev.time}`;
+  const[,mm]=ds.split('-');
+  const meta=`${+ds.split('-')[2]} ${MONTHS_GEN[+mm-1]} · ${ev.allDay?'весь день':ev.time}`;
   t.innerHTML=`<div class="toast-top"><span class="toast-ico">🔔</span><div class="toast-txt"><h4>${esc(ev.title)}</h4><p>${meta} · <b>${when}</b></p></div><button class="close-x">✕</button></div>
   <div class="toast-actions"><button class="mini-btn act-open">Открыть</button><button class="mini-btn act-snz">Отложить 10 мин</button></div>
   ${settings.sticky?'':'<div class="toast-progress"></div>'}`;
@@ -511,46 +616,56 @@ function showPopup(ev,when){
   let gone=false;
   const kill=()=>{if(gone)return;gone=true;t.classList.add('hide');setTimeout(()=>t.remove(),280)};
   t.querySelector('.close-x').onclick=kill;
-  t.querySelector('.act-open').onclick=()=>{selectDay(evStart(ev));kill()};
-  t.querySelector('.act-snz').onclick=()=>{snoozes.push({id:ev.id,at:Date.now()+600000});saveSnoozes();kill()};
+  t.querySelector('.act-open').onclick=()=>{selectDay(new Date(+ds.split('-')[0],+ds.split('-')[1]-1,+ds.split('-')[2]));kill()};
+  t.querySelector('.act-snz').onclick=()=>{snoozes.push({id:ev.id,ds,at:Date.now()+600000});saveSnoozes();kill()};
   if(!settings.sticky)setTimeout(kill,45000);
 }
 function selectDay(d){state.sel=d;state.y=d.getFullYear();state.m=d.getMonth();renderAll()}
 
 if(navigator.serviceWorker){navigator.serviceWorker.addEventListener('message',e=>{
   const d=e.data||{};
-  if(d.type==='snooze'){snoozes.push({id:d.id,at:Date.now()+600000});saveSnoozes()}
+  if(d.type==='snooze'){snoozes.push({id:d.id,ds:d.date||fmtDate(new Date()),at:Date.now()+600000});saveSnoozes()}
   else if(d.type==='open'&&d.date){const[a,b,c]=d.date.split('-').map(Number);selectDay(new Date(a,b-1,c))}
 })}
 
+let tickCount=0;
 function tick(){
   const now=Date.now();
   for(const ev of events){
-    const start=evStart(ev).getTime();
-    for(const lead of leadsFor(ev)){
-      const key=ev.id+'@'+lead;
-      if(!notified.has(key)&&now>=start-lead*60000&&now<start+30*60000){notified.set(key,now);deliver(ev)}
+    const leads=leadsFor(ev);if(!leads.length)continue;
+    const maxLead=Math.max(...leads);
+    const from=new Date(now-30*60000),to=new Date(now+maxLead*60000+60000);
+    for(let d=new Date(from.getFullYear(),from.getMonth(),from.getDate());fmtDate(d)<=fmtDate(to);d.setDate(d.getDate()+1)){
+      const ds=fmtDate(d);
+      if(!occursOn(ev,ds))continue;
+      const start=occStartOn(ev,ds).getTime();
+      for(const lead of leads){
+        const key=ev.id+'@'+ds+'@'+lead;
+        if(!notified.has(key)&&now>=start-lead*60000&&now<start+30*60000){notified.set(key,now);deliver(ev,start-now,ds)}
+      }
     }
   }
-  snoozes=snoozes.filter(s=>{if(now>=s.at){const ev=events.find(x=>x.id===s.id);if(ev)deliver(ev);return false}return true});
+  snoozes=snoozes.filter(s=>{if(now>=s.at){const ev=events.find(x=>x.id===s.id);if(ev)deliver(ev,occStartOn(ev,s.ds).getTime()-now,s.ds);return false}return true});
   saveSnoozes();
   const cutoff=now-7*86400000;
   for(const[k,t]of notified)if(t<cutoff)notified.delete(k);
   saveNotified();updateBadge();
+  if(++tickCount%160===0)scheduleSync();
 }
 
 (function(){
   const q=new URLSearchParams(location.search);
   const sn=q.get('snooze');
-  if(sn){snoozes.push({id:sn,at:Date.now()+600000});saveSnoozes();history.replaceState(null,'',location.pathname)}
+  if(sn){snoozes.push({id:sn,ds:fmtDate(new Date()),at:Date.now()+600000});saveSnoozes();history.replaceState(null,'',location.pathname)}
   const op=q.get('open');
   if(op&&/^\d{4}-\d{2}-\d{2}$/.test(op)){const[a,b,c]=op.split('-').map(Number);state.sel=new Date(a,b-1,c);state.y=a;state.m=b-1;history.replaceState(null,'',location.pathname)}
 })();
 
 applyTheme();renderAll();tick();setInterval(tick,15000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+refreshPushState();updatePushUI();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();refreshPushState();scheduleSync()}});
 
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
 </body>
-</html>
+  </html>
