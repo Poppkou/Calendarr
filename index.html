@@ -19,7 +19,7 @@
 :root{--accent:#34d399;--bg:#0d1017;--surface:#141824;--surface-2:#1a2030;--elev:#212a3e;--text:#eef1f8;--muted:#8d95ab;--border:rgba(255,255,255,.08);--danger:#fb7185;--r-lg:20px;--r-md:14px;--shadow:0 16px 40px rgba(0,0,0,.4);--fd:'Unbounded',system-ui,sans-serif;--fb:'Manrope',system-ui,sans-serif;--safe-top:env(safe-area-inset-top,0);--safe-bot:env(safe-area-inset-bottom,0)}
 [data-theme="light"]{--bg:#edf0f6;--surface:#ffffff;--surface-2:#f3f5fa;--elev:#ffffff;--text:#161b28;--muted:#67708a;--border:rgba(22,27,40,.09);--shadow:0 16px 40px rgba(35,45,90,.10)}
 html,body{overscroll-behavior:none;touch-action:manipulation}
-body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s;padding-top:var(--safe-top);padding-bottom:var(--safe-bot)}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s;padding-top:var(--safe-top)}
 body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1px);background-size:28px 28px}
 .orb{position:fixed;border-radius:50%;filter:blur(100px);z-index:-1;pointer-events:none;opacity:.3}
 [data-theme="light"] .orb{opacity:.16}
@@ -27,16 +27,15 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radia
 .orb-2{width:480px;height:480px;background:color-mix(in srgb,var(--accent) 30%,#6366f1);bottom:-160px;right:-120px;animation:drift2 30s ease-in-out infinite alternate}
 @keyframes drift1{to{transform:translate(70px,50px) scale(1.12)}}
 @keyframes drift2{to{transform:translate(-60px,-40px) scale(1.08)}}
-.topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:13px 16px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.topbar{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:1fr;gap:8px;align-items:center;padding:12px 16px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
 .brand{display:flex;align-items:center;gap:9px}
 .brand-mark{width:34px;height:34px;border-radius:11px;background:var(--accent);display:grid;place-items:center}
 .brand-text b{font-family:var(--fd);font-size:14px;font-weight:800;display:block}
 .brand-text span{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.6px;text-transform:uppercase}
-.month-nav{display:flex;align-items:center;gap:6px;grid-column:1/-1;order:3;justify-content:center;margin-top:4px}
+.month-nav{display:flex;align-items:center;gap:6px;justify-content:center;grid-column:1/-1}
 .month-title{font-family:var(--fd);font-size:17px;font-weight:800;min-width:160px;text-align:center}
 .month-title.swap{animation:swap .35s ease}
 @keyframes swap{from{opacity:0;transform:translateX(14px)}}
-.top-actions{display:flex;gap:7px}
 .btn{font:inherit;font-weight:800;border:none;cursor:pointer;border-radius:11px;padding:9px 14px;display:inline-flex;align-items:center;gap:7px;transition:.2s;color:var(--text)}
 .btn-primary{background:var(--accent);color:#0a1310}
 .btn-ghost{background:var(--surface-2);border:1px solid var(--border)}
@@ -44,7 +43,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radia
 .icon-btn{width:40px;height:40px;flex:none;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;transition:.2s;font:inherit}
 .icon-btn:hover{color:var(--text)}
 .icon-btn.sm{width:32px;height:32px;border-radius:9px}
-.layout{max-width:1100px;margin:0 auto;padding:14px}
+/* нижняя панель действий (мобильные) */
+.actionbar{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--safe-bot));z-index:70;display:flex;gap:8px;align-items:center;justify-content:space-between;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:18px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.actionbar .btn-primary{flex:1;justify-content:center;padding:13px 10px}
+.layout{max-width:1100px;margin:0 auto;padding:14px 14px 104px}
 .calendar-card,.day-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
 .day-panel{margin-top:14px}
 .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:7px}
@@ -65,12 +67,14 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radia
 .panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .panel-date{font-family:var(--fd);font-size:46px;font-weight:800;line-height:1}
 .panel-sub{color:var(--muted);font-weight:700;margin-top:4px;font-size:13px}
-.ev-item{display:flex;gap:10px;padding:11px 10px 11px 13px;border-radius:11px;background:var(--surface-2);cursor:pointer;position:relative;overflow:hidden;transition:.18s;margin-bottom:7px}
+.ev-item{display:flex;gap:10px;padding:11px 10px 11px 13px;border-radius:11px;background:var(--surface-2);cursor:pointer;position:relative;overflow:hidden;transition:.18s;margin-bottom:7px;align-items:flex-start}
 .ev-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ev-c)}
 .ev-time{font-family:var(--fd);font-size:11px;font-weight:600;color:var(--muted);min-width:42px;padding-top:2px}
 .ev-body{min-width:0;flex:1}
 .ev-body b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ev-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.ev-del{flex:none;width:28px;height:28px;border-radius:9px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s}
+.ev-del:hover,.ev-del:active{background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger)}
 .live{color:var(--accent);font-weight:800}
 .empty{text-align:center;padding:26px 0 20px;color:var(--muted)}
 .empty-ico{font-size:32px;margin-bottom:7px}
@@ -132,11 +136,12 @@ textarea{resize:vertical;min-height:60px}
 .mini-btn{font:inherit;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
 .close-x{position:absolute;top:8px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px}
 @media (min-width:700px){
+  .topbar{grid-template-columns:1fr auto 1fr;padding:13px 24px}
+  .month-nav{grid-column:auto}
+  .actionbar{position:static;background:none;border:none;box-shadow:none;padding:0;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0;justify-content:flex-end}
+  .actionbar .btn-primary{flex:none;padding:9px 14px}
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px;padding:20px}
   .day-panel{margin-top:0;position:sticky;top:100px}
-  .topbar{grid-template-columns:1fr auto 1fr}
-  .month-nav{grid-column:auto;order:0;margin-top:0}
-  .top-actions{justify-content:flex-end}
   .day-cell{min-height:94px}
   .chip{font-size:10.5px;padding:3px 6px}
 }
@@ -149,14 +154,16 @@ textarea{resize:vertical;min-height:60px}
     <div class="brand-mark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0a1310" stroke-width="2.4" stroke-linecap="round"><path d="M2 12h4l3-8 4 16 3-8h6"/></svg></div>
     <div class="brand-text"><b>Пульс</b><span>календарь</span></div>
   </div>
-  <button class="icon-btn" id="settingsBtn" title="Настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-  <div class="top-actions"><button class="btn btn-primary" id="addEventBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Событие</button></div>
   <nav class="month-nav">
     <button class="icon-btn" id="prevMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div class="month-title" id="monthTitle"></div>
     <button class="icon-btn" id="nextMonth"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>
-    <button class="btn btn-ghost" id="todayBtn">Сегодня</button>
   </nav>
+  <div class="actionbar">
+    <button class="icon-btn" id="settingsBtn" title="Настройки"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button class="btn btn-primary" id="addEventBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Событие</button>
+    <button class="btn btn-ghost" id="todayBtn">Сегодня</button>
+  </div>
 </header>
 <main class="layout">
   <section class="calendar-card">
@@ -317,12 +324,21 @@ function renderPanel(){
   panelSub.textContent=`${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
   const evs=byDate(fmtDate(d));
   if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие»</small></div>`}
-  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=evStart(e).getTime(),en=evEnd(e).getTime();const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=evEnd(e);const plus=fmtDate(ed)!==e.date?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div></div>`}).join('')}
+  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=evStart(e).getTime(),en=evEnd(e).getTime();const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=evEnd(e);const plus=fmtDate(ed)!==e.date?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить событие">✕</button></div>`}).join('')}
   const mEvs=events.filter(e=>{const[y,m]=e.date.split('-').map(Number);return y===state.y&&m===state.m+1});
   const mins=mEvs.reduce((a,e)=>a+(e.duration||0),0);
   panelFoot.textContent=`${MONTHS_GEN[state.m]}: ${mEvs.length} ${plural(mEvs.length,['событие','события','событий'])}${mins?` · ${durLabel(mins)}`:''}`;
 }
-eventsList.addEventListener('click',e=>{const it=e.target.closest('.ev-item');if(!it)return;const ev=events.find(x=>x.id===it.dataset.id);if(ev)openEventModal(ev)});
+eventsList.addEventListener('click',e=>{
+  const del=e.target.closest('.ev-del');
+  if(del){
+    const id=del.dataset.del;const ev=events.find(x=>x.id===id);
+    if(ev&&confirm(`Удалить событие «${ev.title}»?`)){events=events.filter(x=>x.id!==id);saveEvents();renderAll()}
+    return;
+  }
+  const it=e.target.closest('.ev-item');if(!it)return;
+  const ev=events.find(x=>x.id===it.dataset.id);if(ev)openEventModal(ev);
+});
 function renderAll(){renderCalendar();renderPanel()}
 
 const openModal=m=>m.classList.add('open');
@@ -412,11 +428,7 @@ function tick(){const now=Date.now();for(const ev of events){const start=evStart
 
 applyTheme();renderAll();tick();setInterval(tick,15000);
 
-// ── Регистрация service worker ──
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
-
-// ── Генерация иконок PWA на лету (в кэш) ──
-(function generateIcons(){const sizes=[192,512];sizes.forEach(s=>{const c=document.createElement('canvas');c.width=s;c.height=s;const ctx=c.getContext('2d');ctx.fillStyle='#34d399';ctx.fillRect(0,0,s,s);ctx.fillStyle='#0a1310';ctx.strokeStyle='#0a1310';ctx.lineWidth=s*.05;ctx.lineCap='round';ctx.lineJoin='round';const scale=s/24*.7;ctx.save();ctx.translate(s*.15,s*.15);ctx.scale(scale,scale);ctx.beginPath();ctx.moveTo(2,12);ctx.lineTo(6,12);ctx.lineTo(9,4);ctx.lineTo(13,20);ctx.lineTo(16,12);ctx.lineTo(22,12);ctx.stroke();ctx.restore();c.toBlob(blob=>{if(blob){const url=URL.createObjectURL(blob);const link=document.createElement('link');link.rel='icon';link.sizes=s+'x'+s;link.href=url;if(s===192){const apple=document.querySelector('link[rel="apple-touch-icon"]');if(apple)apple.href=url}}})})})();
 </script>
 </body>
 </html>
