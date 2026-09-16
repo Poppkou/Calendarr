@@ -1,4 +1,5 @@
-const CACHE='pulse-v1';
+const CACHE='pulse-v1';   // было
+const CACHE='pulse-v2';   // стало
 const ASSETS=['index.html','manifest.json'];
 
 self.addEventListener('install',e=>{
