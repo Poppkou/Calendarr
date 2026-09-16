@@ -21,6 +21,7 @@
 html,body{overscroll-behavior:none;touch-action:manipulation}
 body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;font-size:15px;transition:background .3s,color .3s;padding-top:var(--safe-top)}
 body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radial-gradient(color-mix(in srgb,var(--text) 6%,transparent) 1px,transparent 1px);background-size:28px 28px}
+input[type=range]{accent-color:var(--accent)}
 .orb{position:fixed;border-radius:50%;filter:blur(100px);z-index:-1;pointer-events:none;opacity:.3}
 [data-theme="light"] .orb{opacity:.16}
 .orb-1{width:560px;height:560px;background:var(--accent);top:-180px;left:-140px;animation:drift1 24s ease-in-out infinite alternate}
@@ -43,7 +44,6 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;background-image:radia
 .icon-btn{width:40px;height:40px;flex:none;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;color:var(--muted);cursor:pointer;transition:.2s;font:inherit}
 .icon-btn:hover{color:var(--text)}
 .icon-btn.sm{width:32px;height:32px;border-radius:9px}
-/* нижняя панель действий (мобильные) */
 .actionbar{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--safe-bot));z-index:70;display:flex;gap:8px;align-items:center;justify-content:space-between;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:18px;padding:10px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
 .actionbar .btn-primary{flex:1;justify-content:center;padding:13px 10px}
 .layout{max-width:1100px;margin:0 auto;padding:14px 14px 104px}
@@ -125,16 +125,22 @@ textarea{resize:vertical;min-height:60px}
 .seg button.on{background:var(--accent);color:#0a1310}
 .data-btns{display:flex;gap:7px;flex-wrap:wrap}
 #toasts{position:fixed;top:calc(18px + var(--safe-top));left:14px;right:14px;z-index:200;display:flex;flex-direction:column;gap:9px;max-width:480px;margin:0 auto}
-.toast{background:var(--elev);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:13px;padding:13px 34px 13px 15px;box-shadow:var(--shadow);position:relative;animation:toastIn .4s cubic-bezier(.2,.9,.3,1.2)}
+.toast{background:var(--elev);border:1px solid var(--border);border-left:4px solid var(--tc,var(--accent));border-radius:14px;padding:13px 14px 12px;box-shadow:var(--shadow);position:relative;overflow:hidden;animation:toastIn .45s cubic-bezier(.2,.9,.3,1.25)}
 .toast.hide{animation:toastOut .28s forwards}
-@keyframes toastIn{from{opacity:0;transform:translateY(-20px)}}
-@keyframes toastOut{to{opacity:0;transform:translateY(-20px)}}
-.toast h4{font-size:14px;margin-bottom:3px}
+@keyframes toastIn{from{opacity:0;transform:translateY(-24px) scale(.96)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-24px)}}
+.toast-top{display:flex;gap:10px;align-items:flex-start;padding-right:22px}
+.toast-ico{width:36px;height:36px;border-radius:11px;background:color-mix(in srgb,var(--tc,var(--accent)) 18%,transparent);display:grid;place-items:center;font-size:17px;flex:none}
+.toast-txt{flex:1;min-width:0}
+.toast h4{font-size:14px;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .toast p{font-size:12px;color:var(--muted)}
-.toast p b{color:var(--accent)}
-.toast-actions{display:flex;gap:7px;margin-top:10px}
-.mini-btn{font:inherit;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
+.toast p b{color:var(--tc,var(--accent))}
+.toast-actions{display:flex;gap:7px;margin-top:10px;padding-left:46px}
+.mini-btn{font:inherit;font-size:11.5px;font-weight:800;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);cursor:pointer}
+.mini-btn:hover{border-color:var(--tc,var(--accent));color:var(--tc,var(--accent))}
 .close-x{position:absolute;top:8px;right:9px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:4px}
+.toast-progress{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--tc,var(--accent));transform-origin:left;animation:shrink linear forwards}
+@keyframes shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (min-width:700px){
   .topbar{grid-template-columns:1fr auto 1fr;padding:13px 24px}
   .month-nav{grid-column:auto}
@@ -243,9 +249,17 @@ textarea{resize:vertical;min-height:60px}
       <div class="set-row"><div class="set-txt"><b>Всплывающие попапы</b></div><label class="switch"><input type="checkbox" id="stPopups"><span class="track"></span><span class="thumb"></span></label></div>
       <div class="set-row"><div class="set-txt"><b>Не скрывать попапы</b></div><label class="switch"><input type="checkbox" id="stSticky"><span class="track"></span><span class="thumb"></span></label></div>
       <div class="set-row col"><div class="set-txt"><b>Предупреждать заранее</b></div><div class="chips-wrap" id="stLeads"></div></div>
-      <div class="set-row"><div class="set-txt"><b>Звук</b></div><div style="display:flex;gap:10px;align-items:center"><div class="seg" id="stSoundType"><button data-v="chime">Перезвон</button><button data-v="pulse">Импульс</button></div><label class="switch"><input type="checkbox" id="stSound"><span class="track"></span><span class="thumb"></span></label></div></div>
-      <div class="set-row"><div class="set-txt"><b>Системные уведомления</b><small id="stBrowserStatus"></small></div><label class="switch"><input type="checkbox" id="stBrowser"><span class="track"></span><span class="thumb"></span></label></div>
-      <div class="set-row"><div class="set-txt"><b>Тест</b></div><button class="btn btn-ghost" id="stTest">🔔 Тест</button></div>
+      <div class="set-row col">
+        <div class="set-txt"><b>Звук уведомления</b><small>Нажмите на вариант, чтобы прослушать</small></div>
+        <div style="display:flex;gap:12px;align-items:center;width:100%;justify-content:space-between">
+          <div class="chips-wrap" id="stSoundType"></div>
+          <label class="switch"><input type="checkbox" id="stSound"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+      </div>
+      <div class="set-row"><div class="set-txt"><b>Длительность звука</b><small id="stDurLabel"></small></div><input type="range" id="stSoundDur" min="0.5" max="5" step="0.5" style="width:160px"></div>
+      <div class="set-row"><div class="set-txt"><b>Вибрация</b></div><label class="switch"><input type="checkbox" id="stVibrate"><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="set-row"><div class="set-txt"><b>Системные уведомления (шторка)</b><small id="stBrowserStatus"></small></div><label class="switch"><input type="checkbox" id="stBrowser"><span class="track"></span><span class="thumb"></span></label></div>
+      <div class="set-row"><div class="set-txt"><b>Тест</b><small>Попап + звук + шторка</small></div><button class="btn btn-ghost" id="stTest">🔔 Тест</button></div>
     </div>
     <div class="set-section">
       <h5>Данные</h5>
@@ -267,7 +281,7 @@ const EVENT_COLORS=[['#f87171','Красный'],['#fb923c','Оранжевый'
 const ACCENTS=['#34d399','#38bdf8','#a78bfa','#fb7185','#fbbf24'];
 const DUR=[15,30,45,60,90,120,180,240];
 const LEADS=[[0,'В момент события'],[5,'За 5 мин'],[10,'За 10 мин'],[15,'За 15 мин'],[30,'За 30 мин'],[60,'За 1 час'],[120,'За 2 часа'],[1440,'За 1 день']];
-const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime'};
+const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,vibrate:true};
 const fmtDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const fmtHM=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const uid=()=>'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -279,10 +293,11 @@ const store={get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse
 let events=store.get('pulse.events',[]);
 let settings={...DEFAULTS,...store.get('pulse.settings',{})};
 let notified=new Map(Object.entries(store.get('pulse.notified',{})));
-let snoozes=[];
+let snoozes=store.get('pulse.snoozes',[]);
 const saveEvents=()=>store.set('pulse.events',events);
 const saveSettings=()=>store.set('pulse.settings',settings);
 const saveNotified=()=>store.set('pulse.notified',Object.fromEntries(notified));
+const saveSnoozes=()=>store.set('pulse.snoozes',snoozes);
 const today=new Date();
 const state={y:today.getFullYear(),m:today.getMonth(),sel:today};
 
@@ -331,15 +346,11 @@ function renderPanel(){
 }
 eventsList.addEventListener('click',e=>{
   const del=e.target.closest('.ev-del');
-  if(del){
-    const id=del.dataset.del;const ev=events.find(x=>x.id===id);
-    if(ev&&confirm(`Удалить событие «${ev.title}»?`)){events=events.filter(x=>x.id!==id);saveEvents();renderAll()}
-    return;
-  }
+  if(del){const id=del.dataset.del;const ev=events.find(x=>x.id===id);if(ev&&confirm(`Удалить событие «${ev.title}»?`)){events=events.filter(x=>x.id!==id);saveEvents();renderAll()}return}
   const it=e.target.closest('.ev-item');if(!it)return;
   const ev=events.find(x=>x.id===it.dataset.id);if(ev)openEventModal(ev);
 });
-function renderAll(){renderCalendar();renderPanel()}
+function renderAll(){renderCalendar();renderPanel();updateBadge()}
 
 const openModal=m=>m.classList.add('open');
 const closeModal=m=>m.classList.remove('open');
@@ -398,7 +409,6 @@ todayBtn.addEventListener('click',()=>{const t=new Date();state.y=t.getFullYear(
 function bindSeg(id,cb){$(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));cb(b.dataset.v)})}
 bindSeg('#stTheme',v=>{settings.theme=v;saveSettings();applyTheme()});
 bindSeg('#stWeekStart',v=>{settings.weekStart=+v;saveSettings();renderAll()});
-bindSeg('#stSoundType',v=>{settings.soundType=v;saveSettings()});
 function renderAccentSwatches(){stAccent.innerHTML=ACCENTS.map(c=>`<div class="swatch ${c===settings.accent?'on':''}" data-c="${c}" style="--sw:${c};background:${c}"></div>`).join('')}
 stAccent.addEventListener('click',e=>{const s=e.target.closest('.swatch');if(!s)return;settings.accent=s.dataset.c;saveSettings();applyTheme();renderAccentSwatches()});
 function renderLeadChips(){stLeads.innerHTML=LEADS.map(([v,l])=>`<button class="chip-btn ${settings.leads.includes(v)?'on':''}" data-v="${v}">${l}</button>`).join('')}
@@ -407,26 +417,120 @@ stDefDur.addEventListener('change',()=>{settings.defaultDuration=+stDefDur.value
 stPopups.addEventListener('change',()=>{settings.popups=stPopups.checked;saveSettings()});
 stSticky.addEventListener('change',()=>{settings.sticky=stSticky.checked;saveSettings()});
 stSound.addEventListener('change',()=>{settings.sound=stSound.checked;saveSettings()});
+stVibrate.addEventListener('change',()=>{settings.vibrate=stVibrate.checked;saveSettings()});
+
+/* ── звуковой движок: 8 мелодий + регулировка длительности ── */
+function tone(ctx,t,f,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+len+.02)}
+function sweep(ctx,t,f1,f2,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+len+.02)}
+const SOUNDS={
+  chime:{name:'Перезвон',gen:(c,t,d)=>{const s=[523.25,659.25,783.99,1046.5];let i=0;for(let x=t;x<t+d-.2;x+=.3)tone(c,x,s[i++%4],'sine',.34,.22)}},
+  pulse:{name:'Импульс',gen:(c,t,d)=>{for(let x=t;x<t+d-.1;x+=.22)tone(c,x,660,'square',.12,.16)}},
+  bell:{name:'Колокол',gen:(c,t,d)=>{for(let x=t;x<t+d-.5;x+=.6){tone(c,x,880,'sine',.55,.2);tone(c,x,1760,'sine',.4,.08);tone(c,x,2637,'sine',.25,.04)}}},
+  marimba:{name:'Маримба',gen:(c,t,d)=>{const s=[392,440,494,587,659];let i=0;for(let x=t;x<t+d-.15;x+=.18)tone(c,x,s[i++%5],'triangle',.16,.24)}},
+  laser:{name:'Лазер',gen:(c,t,d)=>{for(let x=t;x<t+d-.3;x+=.35)sweep(c,x,1200,180,'sawtooth',.3,.18)}},
+  alarm:{name:'Будильник',gen:(c,t,d)=>{let i=0;for(let x=t;x<t+d-.12;x+=.14)tone(c,x,i++%2?880:740,'square',.12,.15)}},
+  soft:{name:'Нежный',gen:(c,t,d)=>{const s=[440,554.37,659.25];let i=0;for(let x=t;x<t+d-.4;x+=.45)tone(c,x,s[i++%3],'triangle',.5,.18)}},
+  coin:{name:'Монетка',gen:(c,t,d)=>{for(let x=t;x<t+d-.25;x+=.3){sweep(c,x,987,1318,'square',.09,.15);tone(c,x+.09,1318,'square',.18,.15)}}}
+};
+function renderSoundChips(){stSoundType.innerHTML=Object.entries(SOUNDS).map(([k,v])=>`<button class="chip-btn ${settings.soundType===k?'on':''}" data-v="${k}">${v.name}</button>`).join('')}
+stSoundType.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;settings.soundType=b.dataset.v;saveSettings();renderSoundChips();playSound()});
+stSoundDur.addEventListener('input',()=>{settings.soundDur=+stSoundDur.value;stDurLabel.textContent=settings.soundDur+' сек';saveSettings()});
+stSoundDur.addEventListener('change',()=>playSound());
+
+let actx;
+document.addEventListener('pointerdown',()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}},{once:true});
+function playSound(){try{const ctx=actx||new(window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();const p=SOUNDS[settings.soundType]||SOUNDS.chime;const d=Math.min(6,Math.max(.5,settings.soundDur||1.5));p.gen(ctx,ctx.currentTime+.02,d)}catch(e){}}
+
 function updateBrowserUI(){const ok='Notification'in window;stBrowser.disabled=!ok||Notification.permission==='denied';stBrowser.checked=settings.browser&&ok&&Notification.permission==='granted';stBrowserStatus.textContent=!ok?'Не поддерживается':Notification.permission==='granted'?'Разрешено ✓':Notification.permission==='denied'?'Запрещено':'Будет запрошено'}
 stBrowser.addEventListener('change',()=>{if(stBrowser.checked){if(Notification.permission==='default')Notification.requestPermission().then(p=>{settings.browser=p==='granted';stBrowser.checked=settings.browser;saveSettings();updateBrowserUI()});else settings.browser=Notification.permission==='granted'}else settings.browser=false;saveSettings();updateBrowserUI()});
-stTest.addEventListener('click',()=>{if(settings.sound)playSound();if(settings.popups)showPopup({id:'test',title:'Тестовое событие',date:fmtDate(new Date()),time:fmtHM(new Date(Date.now()+15*60000)),allDay:false},'через 15 мин');if(settings.browser&&'Notification'in window&&Notification.permission==='granted')new Notification('Пульс · тест',{body:'Так выглядит системное уведомление'});if(!settings.popups&&!settings.sound&&!(settings.browser&&Notification.permission==='granted'))alert('Включите уведомления 🙂')});
+stTest.addEventListener('click',()=>{
+  const test={id:'test',title:'Тестовое событие',date:fmtDate(new Date()),time:fmtHM(new Date(Date.now()+15*60000)),allDay:false,color:'#38bdf8'};
+  if(settings.sound)playSound();
+  if(settings.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180]);
+  if(settings.popups)showPopup(test,'через 15 мин');
+  systemNotify(test,'через 15 мин');
+  if(!settings.popups&&!settings.sound&&!(settings.browser&&'Notification'in window&&Notification.permission==='granted'))alert('Включите уведомления 🙂');
+});
 stExport.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({events,settings,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pulse-backup.json';a.click();URL.revokeObjectURL(a.href)});
 stImport.addEventListener('click',()=>stImportFile.click());
 stImportFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.events))throw 0;if(confirm(`Импортировать ${data.events.length} ${plural(data.events.length,['событие','события','событий'])}?`)){events=data.events;if(data.settings)settings={...DEFAULTS,...data.settings};saveEvents();saveSettings();applyTheme();syncSettingsUI();renderAll()}}catch{alert('Не удалось прочитать файл')}e.target.value=''});
 stClear.addEventListener('click',()=>{if(confirm('Удалить все события?')){events=[];saveEvents();renderAll()}});
-function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;$$('#stSoundType button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.soundType));renderLeadChips();updateBrowserUI()}
+function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';renderLeadChips();updateBrowserUI()}
 settingsBtn.addEventListener('click',()=>{syncSettingsUI();openModal(settingsModal)});
 
-let actx;
-document.addEventListener('pointerdown',()=>{try{actx=actx||new(window.AudioContext||window.webkitAudioContext)()}catch(e){}},{once:true});
-function playSound(){try{const ctx=actx||new(window.AudioContext||window.webkitAudioContext)();const notes=settings.soundType==='pulse'?[660,660,660]:[523.25,659.25,783.99];notes.forEach((f,i)=>{const o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+i*.26;o.type=settings.soundType==='pulse'?'square':'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.2,t+.03);g.gain.exponentialRampToValueAtTime(.0001,t+.24);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+.25)})}catch(e){}}
+/* ── бейдж на иконке (главный экран) ── */
+function updateBadge(){const now=Date.now(),day=now+86400000;const n=events.filter(e=>{const t=evStart(e).getTime();return t>=now-3600000&&t<day}).length;try{if(n&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}}
 
+/* ── уведомления: попап + шторка ── */
 function leadsFor(ev){if(ev.notify==='off')return[];if(ev.notify==='default')return settings.leads;return[Number(ev.notify)]}
-function deliver(ev){const start=evStart(ev).getTime(),now=Date.now(),msLeft=start-now;const when=msLeft>60000?'через '+human(msLeft):(msLeft>0?'начинается':'уже идёт');if(settings.sound)playSound();if(settings.popups)showPopup(ev,when);if(settings.browser&&'Notification'in window&&Notification.permission==='granted'){const n=new Notification(`Скоро: ${ev.title}`,{body:`${ev.allDay?'весь день':'в '+ev.time} · ${when}`,tag:ev.id});n.onclick=()=>window.focus()}}
-function showPopup(ev,when){const t=document.createElement('div');t.className='toast';const[,mm]=ev.date.split('-');t.innerHTML=`<button class="close-x">✕</button><h4>🔔 ${esc(ev.title)}</h4><p>${+ev.date.split('-')[2]} ${MONTHS_GEN[+mm-1]} · ${ev.allDay?'весь день':ev.time} · <b>${when}</b></p><div class="toast-actions"><button class="mini-btn act-snz">Отложить 10 мин</button></div>`;toasts.prepend(t);while(toasts.children.length>3)toasts.lastChild.remove();let gone=false;const kill=()=>{if(gone)return;gone=true;t.classList.add('hide');setTimeout(()=>t.remove(),280)};t.querySelector('.close-x').onclick=kill;t.querySelector('.act-snz').onclick=()=>{snoozes.push({id:ev.id,at:Date.now()+10*60000});kill()};if(!settings.sticky)setTimeout(kill,45000)}
-function tick(){const now=Date.now();for(const ev of events){const start=evStart(ev).getTime();for(const lead of leadsFor(ev)){const key=ev.id+'@'+lead;if(!notified.has(key)&&now>=start-lead*60000&&now<start+5*60000){notified.set(key,now);deliver(ev)}}}snoozes=snoozes.filter(s=>{if(now>=s.at){const ev=events.find(x=>x.id===s.id);if(ev)deliver(ev);return false}return true});const cutoff=now-7*86400000;for(const[k,t]of notified)if(t<cutoff)notified.delete(k);saveNotified()}
+async function systemNotify(ev,when){
+  if(!(settings.browser&&'Notification'in window&&Notification.permission==='granted'))return;
+  const opts={body:`${ev.allDay?'весь день':'в '+ev.time} · ${when}`,icon:'icon-192.png',badge:'icon-192.png',tag:'pulse-'+ev.id,requireInteraction:!!settings.sticky,data:{id:ev.id,date:ev.date},actions:[{action:'open',title:'Открыть'},{action:'snooze',title:'Отложить 10 мин'}]};
+  if(settings.vibrate)opts.vibrate=[200,100,200];
+  try{const reg=await navigator.serviceWorker.ready;await reg.showNotification(ev.title,opts)}
+  catch(e){try{new Notification(ev.title,opts)}catch(e2){}}
+}
+function deliver(ev){
+  const start=evStart(ev).getTime(),now=Date.now(),msLeft=start-now;
+  const when=msLeft>60000?'через '+human(msLeft):(msLeft>0?'начинается':'уже идёт');
+  if(settings.sound)playSound();
+  if(settings.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180]);
+  if(settings.popups)showPopup(ev,when);
+  systemNotify(ev,when);
+}
+function showPopup(ev,when){
+  const t=document.createElement('div');t.className='toast';t.style.setProperty('--tc',ev.color||'var(--accent)');
+  const[,mm]=ev.date.split('-');
+  const meta=`${+ev.date.split('-')[2]} ${MONTHS_GEN[+mm-1]} · ${ev.allDay?'весь день':ev.time}`;
+  t.innerHTML=`<div class="toast-top"><span class="toast-ico">🔔</span><div class="toast-txt"><h4>${esc(ev.title)}</h4><p>${meta} · <b>${when}</b></p></div><button class="close-x">✕</button></div>
+  <div class="toast-actions"><button class="mini-btn act-open">Открыть</button><button class="mini-btn act-snz">Отложить 10 мин</button></div>
+  ${settings.sticky?'':'<div class="toast-progress"></div>'}`;
+  toasts.prepend(t);
+  while(toasts.children.length>3)toasts.lastChild.remove();
+  if(!settings.sticky)t.querySelector('.toast-progress').style.animationDuration='45s';
+  let gone=false;
+  const kill=()=>{if(gone)return;gone=true;t.classList.add('hide');setTimeout(()=>t.remove(),280)};
+  t.querySelector('.close-x').onclick=kill;
+  t.querySelector('.act-open').onclick=()=>{selectDay(evStart(ev));kill()};
+  t.querySelector('.act-snz').onclick=()=>{snoozes.push({id:ev.id,at:Date.now()+600000});saveSnoozes();kill()};
+  if(!settings.sticky)setTimeout(kill,45000);
+}
+function selectDay(d){state.sel=d;state.y=d.getFullYear();state.m=d.getMonth();renderAll()}
+
+/* ── кнопки уведомлений в шторке ── */
+if(navigator.serviceWorker){navigator.serviceWorker.addEventListener('message',e=>{
+  const d=e.data||{};
+  if(d.type==='snooze'){snoozes.push({id:d.id,at:Date.now()+600000});saveSnoozes()}
+  else if(d.type==='open'&&d.date){const[a,b,c]=d.date.split('-').map(Number);selectDay(new Date(a,b-1,c))}
+})}
+
+function tick(){
+  const now=Date.now();
+  for(const ev of events){
+    const start=evStart(ev).getTime();
+    for(const lead of leadsFor(ev)){
+      const key=ev.id+'@'+lead;
+      if(!notified.has(key)&&now>=start-lead*60000&&now<start+30*60000){notified.set(key,now);deliver(ev)}
+    }
+  }
+  snoozes=snoozes.filter(s=>{if(now>=s.at){const ev=events.find(x=>x.id===s.id);if(ev)deliver(ev);return false}return true});
+  saveSnoozes();
+  const cutoff=now-7*86400000;
+  for(const[k,t]of notified)if(t<cutoff)notified.delete(k);
+  saveNotified();updateBadge();
+}
+
+/* ── параметры из уведомления шторки (?open= / ?snooze=) ── */
+(function(){
+  const q=new URLSearchParams(location.search);
+  const sn=q.get('snooze');
+  if(sn){snoozes.push({id:sn,at:Date.now()+600000});saveSnoozes();history.replaceState(null,'',location.pathname)}
+  const op=q.get('open');
+  if(op&&/^\d{4}-\d{2}-\d{2}$/.test(op)){const[a,b,c]=op.split('-').map(Number);state.sel=new Date(a,b-1,c);state.y=a;state.m=b-1;history.replaceState(null,'',location.pathname)}
+})();
 
 applyTheme();renderAll();tick();setInterval(tick,15000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
