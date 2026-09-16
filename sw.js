@@ -1,4 +1,4 @@
-const CACHE='pulse-v4';
+const CACHE='pulse-v5';
 const ASSETS=['index.html','manifest.json','icon-192.png','icon-512.png'];
 
 self.addEventListener('install',e=>{
@@ -9,24 +9,29 @@ self.addEventListener('activate',e=>{
   e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
   self.clients.claim();
 });
+
 self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  e.respondWith(caches.match(e.request).then(cached=>{
-    const fresh=fetch(e.request).then(r=>{
-      if(r&&r.status===200){const cp=r.clone();caches.open(CACHE).then(c=>c.put(e.request,cp))}
-      return r;
-    }).catch(()=>cached);
-    return cached||fresh;
-  }));
+  const req=e.request;
+  // GET-запросы к другим доменам (воркер Cloudflare) — не трогаем, пусть идут напрямую
+  if(req.method!=='GET' || new URL(req.url).origin!==self.location.origin) return;
+  e.respondWith(
+    caches.match(req).then(cached=>{
+      const fresh=fetch(req).then(r=>{
+        if(r&&r.status===200){const cp=r.clone();caches.open(CACHE).then(c=>c.put(req,cp))}
+        return r;
+      }).catch(()=>cached);
+      return cached||fresh;
+    })
+  );
 });
 
-/* пришёл push из облака — показываем, даже если приложение закрыто */
+/* push из облака — показываем даже при закрытом приложении */
 self.addEventListener('push',e=>{
   let d={};try{d=e.data?e.data.json():{}}catch(err){}
   e.waitUntil((async()=>{
     if(!d.force){
       const list=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-      if(list.some(c=>c.visibilityState==='visible'))return; // приложение на экране — оно само покажет попап
+      if(list.some(c=>c.visibilityState==='visible'))return;
     }
     await self.registration.showNotification(d.title||'Пульс',{
       body:d.body||'',icon:'icon-192.png',badge:'icon-192.png',
