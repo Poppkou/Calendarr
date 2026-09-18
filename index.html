@@ -49,12 +49,17 @@ input[type=range]{accent-color:var(--accent)}
 .actionbar{display:flex;gap:8px;align-items:center;justify-content:space-between}
 .actionbar .btn-primary{flex:1;justify-content:center;padding:13px 10px}
 .layout{max-width:1100px;margin:0 auto;padding:calc(14px + var(--safe-top)) 14px 158px}
+.search-bar{margin-bottom:12px}
+.search-bar input{width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font:inherit;font-size:14px;outline:none;transition:.2s}
+.search-bar input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 .calendar-card,.day-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
 .day-panel{margin-top:14px}
-.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:7px}
+.weekdays{display:grid;grid-template-columns:32px repeat(7,1fr);gap:4px;margin-bottom:7px}
 .weekdays span{text-align:center;font-size:10px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);padding:4px 0}
 .weekdays span.we{color:color-mix(in srgb,var(--accent) 75%,var(--text))}
-.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.weekdays .wk-hdr{font-size:9px;color:var(--muted);opacity:.7}
+.days-grid{display:grid;grid-template-columns:32px repeat(7,1fr);gap:4px}
+.wk-num{display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--muted);opacity:.6;background:var(--surface-2);border-radius:8px}
 .day-cell{background:var(--surface-2);border:1px solid transparent;border-radius:var(--r-md);min-height:54px;padding:5px;display:flex;flex-direction:column;gap:2px;cursor:pointer;position:relative;overflow:hidden;transition:transform .16s,border-color .2s}
 .day-cell.active{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .day-cell.other{opacity:.38}
@@ -180,6 +185,7 @@ textarea{resize:vertical;min-height:60px}
   </div>
 </header>
 <main class="layout">
+  <div class="search-bar"><input type="text" id="searchInput" placeholder="🔍 Поиск событий..."></div>
   <section class="calendar-card">
     <div class="weekdays" id="weekdaysRow"></div>
     <div class="days-grid" id="daysGrid"></div>
@@ -223,6 +229,10 @@ textarea{resize:vertical;min-height:60px}
         <option value="monthly">Каждый месяц</option>
       </select>
     </div>
+    <div class="field" id="repeatDaysField" style="display:none">
+      <span class="lbl">Дни недели (для «Каждую неделю»)</span>
+      <div class="chips-wrap" id="repeatDaysChips"></div>
+    </div>
     <div class="field"><span class="lbl">Цвет</span><div class="swatches" id="evColors"></div></div>
     <div class="field">
       <span class="lbl">Уведомление</span>
@@ -256,6 +266,7 @@ textarea{resize:vertical;min-height:60px}
       <h5>Внешний вид</h5>
       <div class="set-row"><div class="set-txt"><b>Тема</b></div><div class="seg" id="stTheme"><button data-v="light">Светлая</button><button data-v="dark">Тёмная</button><button data-v="auto">Авто</button></div></div>
       <div class="set-row"><div class="set-txt"><b>Акцент</b></div><div class="swatches" id="stAccent"></div></div>
+      <div class="set-row"><div class="set-txt"><b>Номера недель</b></div><label class="switch"><input type="checkbox" id="stWeekNums"><span class="track"></span><span class="thumb"></span></label></div>
     </div>
     <div class="set-section">
       <h5>Календарь</h5>
@@ -307,7 +318,7 @@ const EVENT_COLORS=[['#f87171','Красный'],['#fb923c','Оранжевый'
 const ACCENTS=['#34d399','#38bdf8','#a78bfa','#fb7185','#fbbf24'];
 const DUR=[15,30,45,60,90,120,180,240];
 const LEADS=[[0,'В момент события'],[5,'За 5 мин'],[10,'За 10 мин'],[15,'За 15 мин'],[30,'За 30 мин'],[60,'За 1 час'],[120,'За 2 часа'],[1440,'За 1 день']];
-const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,soundVol:100,vibrate:true,pushUrl:''};
+const DEFAULTS={theme:'dark',accent:'#34d399',weekStart:1,dimOther:true,defaultDuration:60,popups:true,sticky:false,browser:false,leads:[15,0],sound:true,soundType:'chime',soundDur:1.5,soundVol:100,vibrate:true,pushUrl:'',weekNums:true};
 const fmtDate=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const fmtHM=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const uid=()=>'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -320,6 +331,7 @@ let events=store.get('pulse.events',[]);
 let settings={...DEFAULTS,...store.get('pulse.settings',{})};
 let notified=new Map(Object.entries(store.get('pulse.notified',{})));
 let snoozes=store.get('pulse.snoozes',[]);
+let searchQuery='';
 const saveEvents=()=>store.set('pulse.events',events);
 const saveSettings=()=>store.set('pulse.settings',settings);
 const saveNotified=()=>store.set('pulse.notified',Object.fromEntries(notified));
@@ -331,16 +343,21 @@ let pushSubscribed=false;
 function applyTheme(){const dark=settings.theme==='dark'||(settings.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.setProperty('--accent',settings.accent);document.querySelector('meta[name="theme-color"]').setAttribute('content',dark?'#141824':'#ffffff')}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>settings.theme==='auto'&&applyTheme());
 
-/* ── повторения: попадает ли событие на дату ds ── */
+function getISOWeek(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));const dayNum=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-dayNum);const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil((((d-yearStart)/86400000)+1)/7)}
+
 function occursOn(ev,ds){
   if(!ev.date||ds<ev.date)return false;
+  if(searchQuery){const q=searchQuery.toLowerCase();const match=ev.title.toLowerCase().includes(q)||(ev.notes||'').toLowerCase().includes(q);if(!match)return false}
   if(!ev.repeat||ev.repeat==='none')return ds===ev.date;
   const[y,m,d]=ev.date.split('-').map(Number);
   const[Y,M,D]=ds.split('-').map(Number);
   const cur=new Date(Y,M-1,D);
   if(ev.repeat==='daily')return true;
   if(ev.repeat==='weekdays'){const wd=cur.getDay();return wd>=1&&wd<=5}
-  if(ev.repeat==='weekly')return cur.getDay()===new Date(y,m-1,d).getDay();
+  if(ev.repeat==='weekly'){
+    if(ev.repeatDays&&ev.repeatDays.length>0){return ev.repeatDays.includes(cur.getDay())}
+    return cur.getDay()===new Date(y,m-1,d).getDay();
+  }
   if(ev.repeat==='monthly')return D===d;
   return false;
 }
@@ -351,7 +368,12 @@ const evEnd=e=>new Date(evStart(e).getTime()+(e.duration||0)*60000);
 
 function renderCalendar(){
   const startIdx=settings.weekStart===1?0:6;
-  weekdaysRow.innerHTML=Array.from({length:7},(_,i)=>{const mi=(startIdx+i)%7;return`<span class="${mi>=5?'we':''}">${WD[mi]}</span>`}).join('');
+  const showWk=settings.weekNums;
+  const cols=showWk?'32px repeat(7,1fr)':'repeat(7,1fr)';
+  weekdaysRow.style.gridTemplateColumns=cols;
+  daysGrid.style.gridTemplateColumns=cols;
+  let wkHdr=showWk?'<span class="wk-hdr">Нед</span>':'';
+  weekdaysRow.innerHTML=wkHdr+Array.from({length:7},(_,i)=>{const mi=(startIdx+i)%7;return`<span class="${mi>=5?'we':''}">${WD[mi]}</span>`}).join('');
   const{y,m}=state;
   monthTitle.textContent=`${MONTHS[m]} ${y}`;
   const first=new Date(y,m,1);
@@ -369,6 +391,7 @@ function renderCalendar(){
     if(ds===selS)cls.push('active');
     const chips=evs.slice(0,2).map(e=>`<div class="chip" style="--chip-c:${e.color}"><span class="dot"></span><span class="ct">${e.time?e.time+' ':''}${esc(e.title)}</span></div>`).join('');
     const more=evs.length>2?`<div class="more">+${evs.length-2}</div>`:'';
+    if(showWk&&(i%7===0)){const wk=getISOWeek(dt);html+=`<div class="wk-num">${wk}</div>`}
     html+=`<div class="${cls.join(' ')}" data-date="${ds}"><div class="num">${dt.getDate()}</div><div class="chips">${chips}${more}</div></div>`;
   }
   daysGrid.innerHTML=html;
@@ -381,7 +404,7 @@ function renderPanel(){
   panelSub.textContent=`${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
   const evs=byDate(fmtDate(d));
   if(!evs.length){eventsList.innerHTML=`<div class="empty"><div class="empty-ico">🌤</div><p>Пока пусто</p><small>Нажмите «+» или «Событие» внизу</small></div>`}
-  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=occStartOn(e,fmtDate(d)).getTime(),en=s+(e.duration||0)*60000;const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=new Date(en);const plus=fmtDate(ed)!==fmtDate(d)?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}const rep=e.repeat&&e.repeat!=='none'?` · <span class="rep">⟳ ${REP_LABEL[e.repeat]}</span>`:'';return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${rep}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить">✕</button></div>`}).join('')}
+  else{const now=Date.now();eventsList.innerHTML=evs.map(e=>{const s=occStartOn(e,fmtDate(d)).getTime(),en=s+(e.duration||0)*60000;const live=now>=s&&now<en&&!e.allDay;let range;if(e.allDay)range='весь день';else{const ed=new Date(en);const plus=fmtDate(ed)!==fmtDate(d)?' (+1 д)':'';range=`${e.time} – ${fmtHM(ed)}${plus}`}const rep=e.repeat&&e.repeat!=='none'?` · <span class="rep">⟳ ${REP_LABEL[e.repeat]}${e.repeatDays&&e.repeatDays.length?' ('+e.repeatDays.map(x=>WD[(x+6)%7]).join(', ')+')':''}</span>`:'';return`<div class="ev-item" data-id="${e.id}" style="--ev-c:${e.color}"><div class="ev-time">${e.allDay?'день':e.time}</div><div class="ev-body"><b>${esc(e.title)}</b><div class="ev-meta">${range}${e.duration&&!e.allDay?` · ${durLabel(e.duration)}`:''}${rep}${live?' · <span class="live">● сейчас</span>':''}</div>${e.notes?`<small class="ev-meta" style="display:block;margin-top:3px">${esc(e.notes)}</small>`:''}</div><button class="ev-del" data-del="${e.id}" title="Удалить">✕</button></div>`}).join('')}
   const mEvs=events.filter(e=>{const[y,m]=e.date.split('-').map(Number);return y===state.y&&m===state.m+1});
   const mins=mEvs.reduce((a,e)=>a+(e.duration||0),0);
   panelFoot.textContent=`${MONTHS_GEN[state.m]}: ${mEvs.length} ${plural(mEvs.length,['событие','события','событий'])}${mins?` · ${durLabel(mins)}`:''}`;
@@ -402,7 +425,7 @@ $$('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)c
 $$('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal-overlay'))));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.modal-overlay.open').forEach(closeModal)});
 
-let editingId=null,chosenColor=EVENT_COLORS[3][0];
+let editingId=null,chosenColor=EVENT_COLORS[3][0],chosenRepeatDays=[];
 durChips.innerHTML=DUR.map(m=>`<button type="button" class="chip-btn" data-min="${m}">${m<60?m+' мин':durLabel(m)}</button>`).join('');
 function markDurChip(min){$$('#durChips .chip-btn').forEach(b=>b.classList.toggle('on',+b.dataset.min===min))}
 function setDuration(min){evDurH.value=Math.floor(min/60);evDurM.value=min%60;markDurChip(min);updateEndHint()}
@@ -416,6 +439,13 @@ evDurM.addEventListener('input',()=>{markDurChip((+evDurH.value||0)*60+(+evDurM.
 evTime.addEventListener('input',updateEndHint);
 evAllDay.addEventListener('change',()=>{syncTimeBlock();updateEndHint()});
 
+repeatDaysChips.innerHTML=WD.map((d,i)=>`<button type="button" class="chip-btn" data-day="${(i+1)%7}">${d}</button>`).join('');
+repeatDaysChips.addEventListener('click',e=>{const b=e.target.closest('.chip-btn');if(!b)return;const day=+b.dataset.day;chosenRepeatDays=chosenRepeatDays.includes(day)?chosenRepeatDays.filter(x=>x!==day):[...chosenRepeatDays,day];renderRepeatDaysChips()});
+function renderRepeatDaysChips(){repeatDaysChips.querySelectorAll('.chip-btn').forEach(b=>b.classList.toggle('on',chosenRepeatDays.includes(+b.dataset.day)))}
+evRepeat.addEventListener('change',()=>{repeatDaysField.style.display=evRepeat.value==='weekly'?'':'none';if(evRepeat.value!=='weekly')chosenRepeatDays=[];renderRepeatDaysChips()});
+
+searchInput.addEventListener('input',()=>{searchQuery=searchInput.value.trim();renderAll()});
+
 function openEventModal(ev){
   editingId=ev?ev.id:null;
   eventModalTitle.textContent=ev?'Событие':'Новое событие';
@@ -425,6 +455,9 @@ function openEventModal(ev){
   evTime.value=ev&&ev.time?ev.time:'18:00';
   setDuration(ev?ev.duration:settings.defaultDuration);
   evRepeat.value=ev&&ev.repeat?ev.repeat:'none';
+  chosenRepeatDays=ev&&ev.repeatDays?[...ev.repeatDays]:[];
+  repeatDaysField.style.display=evRepeat.value==='weekly'?'':'none';
+  renderRepeatDaysChips();
   chosenColor=ev?ev.color:EVENT_COLORS[3][0];renderSwatches();
   evNotify.value=ev?String(ev.notify):'default';
   evNotes.value=ev?ev.notes||'':'';
@@ -437,7 +470,7 @@ eventForm.addEventListener('submit',e=>{
   e.preventDefault();
   const title=evTitle.value.trim();if(!title)return;
   const allDay=evAllDay.checked;
-  const data={title,date:evDate.value||fmtDate(new Date()),allDay,time:allDay?null:(evTime.value||'09:00'),duration:allDay?0:Math.max(5,(+evDurH.value||0)*60+(+evDurM.value||0)),repeat:evRepeat.value,color:chosenColor,notify:evNotify.value,notes:evNotes.value.trim()};
+  const data={title,date:evDate.value||fmtDate(new Date()),allDay,time:allDay?null:(evTime.value||'09:00'),duration:allDay?0:Math.max(5,(+evDurH.value||0)*60+(+evDurM.value||0)),repeat:evRepeat.value,repeatDays:evRepeat.value==='weekly'?chosenRepeatDays:[],color:chosenColor,notify:evNotify.value,notes:evNotes.value.trim()};
   if(editingId)Object.assign(events.find(x=>x.id===editingId),data);
   else events.push({id:uid(),createdAt:Date.now(),...data});
   saveEvents();closeModal(eventModal);renderAll();
@@ -468,6 +501,7 @@ stPopups.addEventListener('change',()=>{settings.popups=stPopups.checked;saveSet
 stSticky.addEventListener('change',()=>{settings.sticky=stSticky.checked;saveSettings()});
 stSound.addEventListener('change',()=>{settings.sound=stSound.checked;saveSettings()});
 stVibrate.addEventListener('change',()=>{settings.vibrate=stVibrate.checked;saveSettings()});
+stWeekNums.addEventListener('change',()=>{settings.weekNums=stWeekNums.checked;saveSettings();renderAll()});
 
 function tone(ctx,dest,t,f,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
 function sweep(ctx,dest,t,f1,f2,type,len,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(f2,t+len);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+len);o.connect(g);g.connect(dest);o.start(t);o.stop(t+len+.02)}
@@ -517,12 +551,11 @@ stExport.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({even
 stImport.addEventListener('click',()=>stImportFile.click());
 stImportFile.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.events))throw 0;if(confirm(`Импортировать ${data.events.length} ${plural(data.events.length,['событие','события','событий'])}?`)){events=data.events;if(data.settings)settings={...DEFAULTS,...data.settings};saveEvents();saveSettings();applyTheme();syncSettingsUI();renderAll()}}catch{alert('Не удалось прочитать файл')}e.target.value=''});
 stClear.addEventListener('click',()=>{if(confirm('Удалить все события?')){events=[];saveEvents();renderAll()}});
-function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';stSoundVol.value=settings.soundVol;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';renderLeadChips();updateBrowserUI();stPushUrl.value=settings.pushUrl||'';updatePushUI()}
+function syncSettingsUI(){$$('#stTheme button').forEach(b=>b.classList.toggle('on',b.dataset.v===settings.theme));renderAccentSwatches();$$('#stWeekStart button').forEach(b=>b.classList.toggle('on',+b.dataset.v===settings.weekStart));stDefDur.value=String(settings.defaultDuration);stPopups.checked=settings.popups;stSticky.checked=settings.sticky;stSound.checked=settings.sound;stVibrate.checked=settings.vibrate;stWeekNums.checked=settings.weekNums;renderSoundChips();stSoundDur.value=settings.soundDur;stDurLabel.textContent=settings.soundDur+' сек';stSoundVol.value=settings.soundVol;stVolLabel.textContent=settings.soundVol===0?'выключено':settings.soundVol+'%';renderLeadChips();updateBrowserUI();stPushUrl.value=settings.pushUrl||'';updatePushUI()}
 settingsBtn.addEventListener('click',()=>{syncSettingsUI();openModal(settingsModal)});
 
 function updateBadge(){const now=Date.now();let n=0;const ds1=fmtDate(new Date(now-3600000)),ds2=fmtDate(new Date(now+86400000));for(const ev of events){for(const ds of[ds1,ds2]){if(!occursOn(ev,ds))continue;const t=occStartOn(ev,ds).getTime();if(t>=now-3600000&&t<now+86400000)n++}}try{if(n&&navigator.setAppBadge)navigator.setAppBadge(n);else if(navigator.clearAppBadge)navigator.clearAppBadge()}catch(e){}}
 
-/* ── PUSH: подключение и синхронизация расписания ── */
 function urlB64ToU8(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
 const shortLead=m=>m<60?m+' мин':m<1440?durLabel(m):'1 день';
 function buildSchedule(){
@@ -596,7 +629,7 @@ async function systemNotify(ev,when,ds){
   catch(e){try{new Notification(ev.title,opts)}catch(e2){}}
 }
 function deliver(ev,msLeft,ds){
-  if(pushSubscribed&&document.visibilityState!=='visible')return; // приложение скрыто — push сам покажет
+  if(pushSubscribed&&document.visibilityState!=='visible')return;
   const when=msLeft>60000?'через '+human(msLeft):(msLeft>0?'начинается':'уже идёт');
   if(settings.sound)playSound();
   if(settings.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180]);
@@ -665,7 +698,7 @@ applyTheme();renderAll();tick();setInterval(tick,15000);
 refreshPushState();updatePushUI();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();refreshPushState();scheduleSync()}});
 
-if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+if('serviceWorker'in navigator){window.addEventListener('load',async()=>{try{const regs=await navigator.serviceWorker.getRegistrations();for(const r of regs)if(r.scope.includes('Calendar'))await r.unregister()}catch(e){}navigator.serviceWorker.register('sw2.js').catch(()=>{})})}
 </script>
 </body>
-</html>
+  </html>
