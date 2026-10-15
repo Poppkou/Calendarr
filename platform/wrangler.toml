@@ -1,0 +1,32 @@
+name = "pulse-tour"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Статика: приложение туриста (/app/), админка (/admin/), лендинг (/).
+# Всё, что не нашлось среди файлов (/api/*, /t/<token>/), обрабатывает воркер.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "none"
+
+# Планировщик уведомлений — каждую минуту.
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pulse-tour"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
+
+[vars]
+VAPID_SUBJECT = "mailto:admin@example.com"
+MAX_SENDS_PER_RUN = "40"
+# PUBLIC_URL = "https://tour.example.com"
+# TELEGRAM_BOT_USERNAME = "PulseTourBot"
+# Секреты (wrangler secret put ...): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, SETUP_KEY,
+# TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET
