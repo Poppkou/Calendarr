@@ -1,0 +1,53 @@
+name: Пульс Тур
+
+on:
+  push:
+    paths: ['platform/**', '.github/workflows/platform.yml']
+  pull_request:
+    paths: ['platform/**', '.github/workflows/platform.yml']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Задеплоить в Cloudflare после проверок'
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    working-directory: platform
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  deploy:
+    needs: check
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+      - name: Деплой в Cloudflare
+        run: bash scripts/ci-deploy.sh
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SETUP_KEY: ${{ secrets.SETUP_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}

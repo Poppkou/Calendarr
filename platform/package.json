@@ -1,0 +1,25 @@
+{
+  "name": "pulse-tour",
+  "version": "0.1.0",
+  "description": "Пульс Тур — расписание тура с уведомлениями для турфирм и туристов",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "test": "vitest run",
+    "typecheck": "tsc -p .",
+    "check": "tsc -p . && vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply pulse-tour --local",
+    "db:migrate": "wrangler d1 migrations apply pulse-tour --remote",
+    "deploy": "npm run check && wrangler d1 migrations apply pulse-tour --remote && wrangler deploy",
+    "vapid": "node scripts/gen-vapid.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261015.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4",
+    "wrangler": "^4.151.0"
+  },
+  "dependencies": {
+    "hono": "^4.13.13"
+  },
+  "private": true
+}
