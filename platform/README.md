@@ -118,8 +118,7 @@ SETUP_KEY=любая-длинная-строка-от-16-символов
    Better Stack. Если планировщик встанет, вы узнаете об этом раньше туристов.
 9. Свой домен: Cloudflare → Workers → pulse-tour → Settings → Domains.
 
-Автодеплой из GitHub: добавьте в секреты репозитория `CLOUDFLARE_API_TOKEN` и
-`CLOUDFLARE_ACCOUNT_ID`. Затем GitHub → Actions → «Пульс Тур» → Run workflow → deploy.
+**Без терминала, из браузера:** см. пошаговую инструкцию [`docs/DEPLOY-GUIDE.md`](../docs/DEPLOY-GUIDE.md) — деплой одной кнопкой в GitHub Actions (база, ключи и Telegram настраиваются автоматически).
 
 ## Как этим пользуется турфирма
 
