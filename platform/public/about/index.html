@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Пульс Тур — как это работает</title>
+<meta name="description" content="Турфирма ведёт программу тура на сайте, а туристы получают её в телефон и заранее получают напоминания о трансферах, экскурсиях и вылетах.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://pulse-tour.nickdemidovv.workers.dev/about/">
+<meta property="og:title" content="Пульс Тур">
+<meta property="og:description" content="Программа тура в телефоне туриста и напоминания о трансферах, экскурсиях и вылетах.">
+<meta property="og:image" content="https://pulse-tour.nickdemidovv.workers.dev/about/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/app/icon-192.png">
+<style>html{color-scheme:light dark}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout: one reading column; screenshots break out wider; phone screens sit in a wrapping gallery. */
+:root {
+  --bg: #f2f6f5;
+  --surface: #ffffff;
+  --ink: #12201f;
+  --muted: #5a6b68;
+  --line: #dbe4e2;
+  --accent: #0e9f8a;
+  --accent-ink: #0a6c5e;
+  --accent-soft: #dff3ef;
+  --sun: #e8822f;
+  --sun-soft: #fdecdc;
+  --bezel: #1b2726;
+  --shadow: 0 18px 40px -22px rgba(18, 40, 37, .35);
+  --f-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1413; --surface: #13201e; --ink: #e7f0ee; --muted: #93a6a2; --line: #233532;
+    --accent: #2cc2a9; --accent-ink: #79dcca; --accent-soft: #143430; --sun: #f39b52; --sun-soft: #3a2817;
+    --bezel: #050909; --shadow: 0 18px 40px -22px rgba(0, 0, 0, .7); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1413; --surface: #13201e; --ink: #e7f0ee; --muted: #93a6a2; --line: #233532;
+  --accent: #2cc2a9; --accent-ink: #79dcca; --accent-soft: #143430; --sun: #f39b52; --sun-soft: #3a2817;
+  --bezel: #050909; --shadow: 0 18px 40px -22px rgba(0, 0, 0, .7); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 17px/1.6 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; }
+.read { max-width: 680px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(38px, 8vw, 68px); line-height: 1.02; font-weight: 700; }
+h2 { font-size: clamp(24px, 4.2vw, 34px); line-height: 1.15; font-weight: 700; }
+h3 { font-size: 19px; line-height: 1.3; font-weight: 500; }
+p { margin: 0; }
+.eyebrow { font: 600 13px/1 var(--f-body); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
+.muted { color: var(--muted); }
+strong { font-weight: 600; }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; padding-block: 56px 32px; }
+.hero .text { display: grid; gap: 20px; min-width: 0; }
+.lead { font-size: 20px; line-height: 1.5; max-width: 34ch; }
+.route { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.route span { font: 500 14px/1 var(--f-body); padding: 8px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.hero .phone { justify-self: center; width: min(300px, 100%); transform: rotate(2deg); }
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; padding-block: 36px 16px; gap: 28px; }
+  .hero .phone { transform: none; width: min(260px, 80%); }
+}
+
+section { padding-block: 44px; border-top: 1px solid var(--line); display: grid; gap: 22px; }
+section > .read { display: grid; gap: 14px; }
+
+/* Steps: a real sequence, so numbers carry meaning */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.steps li { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.steps b { font: 700 14px/1 var(--f-display); color: var(--accent-ink); }
+@media (max-width: 860px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .steps { grid-template-columns: 1fr; } }
+
+/* Desktop screenshots in a browser frame */
+.shot { margin: 0; display: grid; gap: 10px; }
+.browser { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+.browser .bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.browser .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
+.browser .bar span { margin-left: 10px; font-size: 12px; color: var(--muted); background: var(--bg); border-radius: 6px; padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.shot img, .phone img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+figcaption { font-size: 15px; color: var(--muted); max-width: 680px; }
+figcaption b { color: var(--ink); font-weight: 600; }
+
+.office { display: grid; gap: 40px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+
+/* Phone screenshots */
+.phone { border-radius: 34px; padding: 8px; background: var(--bezel); box-shadow: var(--shadow); }
+.phone img { border-radius: 27px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 28px 22px; }
+.gallery figure { margin: 0; display: grid; gap: 12px; align-content: start; }
+
+/* Notification examples */
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 860px) { .notes { grid-template-columns: 1fr; } }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 6px; box-shadow: var(--shadow); min-width: 0; }
+.note .app { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.note .t { font-weight: 600; line-height: 1.35; }
+.note .b { font-size: 15px; color: var(--muted); line-height: 1.4; }
+.note.change { border-color: color-mix(in srgb, var(--sun) 55%, var(--line)); background: linear-gradient(var(--sun-soft), var(--surface) 70%); }
+.kind { justify-self: start; font: 600 11px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); }
+.note.change .kind { background: var(--sun-soft); color: var(--sun); }
+
+/* Details grid */
+.facts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 680px) { .facts { grid-template-columns: 1fr; } }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fact h3 { font-size: 17px; }
+.fact p { color: var(--muted); font-size: 16px; }
+
+ul.plain { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--accent-ink); }
+.status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.prices { display: flex; flex-wrap: wrap; gap: 10px; }
+.prices span { padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 15px; }
+.prices b { font-family: var(--f-display); font-weight: 500; }
+footer { padding-top: 32px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+
+/* Zoom */
+#zoom { position: fixed; inset: 0; z-index: 50; background: rgba(6, 12, 11, .88); display: grid; place-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+#zoom[hidden] { display: none; }
+#zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; cursor: zoom-out; }
+#zoom button { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); font: 600 15px var(--f-body); border: 0; border-radius: 999px; padding: 10px 16px; background: #fff; color: #111; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) { .shot img, .phone img { transition: transform .2s ease; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="text">
+      <span class="eyebrow">Мой проект</span>
+      <h1>Пульс Тур</h1>
+      <p class="lead">Турфирма ведёт программу тура на сайте, а туристы получают её в телефон и заранее получают напоминания о трансферах, экскурсиях и вылетах.</p>
+      <div class="route"><span>✈️ вылеты</span><span>🚌 трансферы</span><span>🏛️ экскурсии</span><span>⚠️ изменения</span></div>
+    </div>
+    <div class="phone"><img src="img/t1-home.webp" alt="Главный экран туриста: ближайшее событие с обратным отсчётом" width="780" height="1688"></div>
+  </header>
+
+  <section>
+    <div class="read">
+      <span class="eyebrow">Как это работает</span>
+      <h2>Четыре шага от офиса до телефона туриста</h2>
+    </div>
+    <ol class="steps">
+      <li><b>1</b><h3>Менеджер вносит программу</h3><p class="muted">В личном кабинете на сайте: вылеты, трансферы, экскурсии, место сбора.</p></li>
+      <li><b>2</b><h3>Турист получает ссылку</h3><p class="muted">Личную ссылку или QR-код. Без скачивания приложений и регистрации.</p></li>
+      <li><b>3</b><h3>Сервис напоминает заранее</h3><p class="muted">На телефон или в Telegram: о вылете — за сутки, о трансфере — накануне и за час.</p></li>
+      <li><b>4</b><h3>Изменения доходят сразу</h3><p class="muted">Менеджер поправил время, и все туристы тут же получили уведомление.</p></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="read">
+      <span class="eyebrow">Глазами турфирмы</span>
+      <h2>Тур «Куба: Гавана и Варадеро»</h2>
+    </div>
+    <div class="office">
+      <figure class="shot">
+        <div class="browser"><div class="bar"><i></i><i></i><i></i><span>pulse-tour…/admin — расписание</span></div>
+          <img src="img/a2-schedule.webp" alt="Программа тура по дням в кабинете менеджера" loading="lazy" width="2000" height="1281"></div>
+        <figcaption><b>Программа по дням.</b> Справа — когда напомнить туристам.</figcaption>
+      </figure>
+      <div class="pair">
+        <figure class="shot">
+          <div class="browser"><div class="bar"><i></i><i></i><i></i><span>личная ссылка</span></div>
+            <img src="img/a5-qr.webp" alt="Личная ссылка и QR-код туриста" loading="lazy" width="2000" height="1281"></div>
+          <figcaption><b>Ссылка и QR-код</b> для каждого туриста.</figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="browser"><div class="bar"><i></i><i></i><i></i><span>сообщение группе</span></div>
+            <img src="img/a6-broadcast.webp" alt="Срочное сообщение всей группе" loading="lazy" width="2000" height="1281"></div>
+          <figcaption><b>Срочное сообщение</b> всей группе за секунды.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="read">
+      <span class="eyebrow">Глазами туриста</span>
+      <h2>Тот же тур в телефоне</h2>
+    </div>
+    <div class="gallery">
+      <figure><div class="phone"><img src="img/t1-home.webp" alt="Главный экран туриста" loading="lazy" width="780" height="1688"></div>
+        <figcaption><b>Что дальше</b> и сколько осталось.</figcaption></figure>
+      <figure><div class="phone"><img src="img/t2-today.webp" alt="Расписание на сегодня с подробностями" loading="lazy" width="780" height="1688"></div>
+        <figcaption><b>План на день</b> с адресом и картой.</figcaption></figure>
+      <figure><div class="phone"><img src="img/t3-changed.webp" alt="Событие с отметкой «Изменено»" loading="lazy" width="780" height="1688"></div>
+        <figcaption><b>Изменения</b> помечены оранжевым.</figcaption></figure>
+      <figure><div class="phone"><img src="img/t5-offline.webp" alt="Расписание без интернета" loading="lazy" width="780" height="1688"></div>
+        <figcaption><b>Работает</b> без интернета.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="read">
+      <span class="eyebrow">Уведомления</span>
+      <h2>Что приходит туристу</h2>
+    </div>
+    <div class="notes">
+      <div class="note"><span class="kind">Напоминание</span><div class="app"><span>Куба: Гавана и Варадеро</span><span>10:00</span></div>
+        <div class="t">🏛️ Табачная фабрика Partagás — через 30 мин</div><div class="b">Сегодня в 10:30 · Место сбора: Лобби отеля</div></div>
+      <div class="note change"><span class="kind">Изменение</span><div class="app"><span>Куба: Гавана и Варадеро</span><span>сейчас</span></div>
+        <div class="t">⚠️ Изменение: 🚌 Трансфер в Варадеро</div><div class="b">Новое время: завтра в 08:00 (было завтра в 09:00)</div></div>
+      <div class="note"><span class="kind">Сообщение группе</span><div class="app"><span>Куба: Гавана и Варадеро</span><span>сейчас</span></div>
+        <div class="t">📣 Куба: Гавана и Варадеро</div><div class="b">Друзья, к ужину в «Тропикане» нужен дресс-код: мужчинам — брюки и рубашка с рукавом.</div></div>
+    </div>
+  </section>
+
+  <footer>Демо-тур, имена вымышленные. Нажмите на картинку, чтобы увеличить.</footer>
+</div>
+
+<div id="zoom" hidden role="dialog" aria-modal="true" aria-label="Увеличенный скриншот">
+  <button type="button" id="zoomClose">Закрыть</button>
+  <img id="zoomImg" alt="">
+</div>
+
+<script>
+(() => {
+  const zoom = document.getElementById('zoom'), img = document.getElementById('zoomImg'), close = document.getElementById('zoomClose');
+  const hide = () => { zoom.hidden = true; img.removeAttribute('src'); };
+  document.querySelectorAll('.shot img, .phone img').forEach((el) => {
+    el.tabIndex = 0;
+    const open = () => { img.src = el.src; img.alt = el.alt; zoom.hidden = false; close.focus(); };
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(); });
+  });
+  zoom.addEventListener('click', (e) => { if (e.target !== close) hide(); });
+  close.addEventListener('click', hide);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !zoom.hidden) hide(); });
+})();
+</script>
+
+</body>
+</html>
