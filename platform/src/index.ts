@@ -3,6 +3,7 @@ import { admin, auth } from './routes/admin';
 import { tourist, loadTourist, manifestFor } from './routes/tourist';
 import { telegram } from './routes/telegram';
 import { cleanup, runDispatch } from './dispatch';
+import { askReviews } from './reviews';
 import { getMeta, HttpError, type Env } from './util';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -55,6 +56,8 @@ export default {
   async scheduled(ctrl: ScheduledController, env: Env, ctx: ExecutionContext) {
     const stats = await runDispatch(env);
     if (stats.claimed || stats.fanned) console.log('dispatch', JSON.stringify(stats));
+    // Отзывы — отдельно, чтобы сбой Telegram не мешал напоминаниям.
+    ctx.waitUntil(askReviews(env).then((n) => { if (n) console.log('reviews asked', n); }).catch((e) => console.error('reviews', e)));
     if (new Date(ctrl.scheduledTime).getUTCMinutes() === 7) ctx.waitUntil(cleanup(env.DB, Date.now()));
   },
 } satisfies ExportedHandler<Env>;

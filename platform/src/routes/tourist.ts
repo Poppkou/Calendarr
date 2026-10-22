@@ -5,12 +5,13 @@ import { eventType } from '../schedule';
 import { tzLabel } from '../time';
 import { bad, HttpError, newId, normalizeCode, formatCode, type Env } from '../util';
 import { readJson } from './common';
+import { createAlert } from '../alerts';
 
 export const tourist = new Hono<{ Bindings: Env }>();
 
 export interface TouristCtx {
   participant_id: string; participant_name: string; code: string; token: string;
-  group_id: string; group_title: string; tz: string; home_tz: string; start_date: string; end_date: string;
+  agency_id: string; group_id: string; group_title: string; tz: string; home_tz: string; start_date: string; end_date: string;
   guide_name: string; guide_phone: string; group_notes: string; version: number; archived: number;
   agency_name: string; brand_color: string; agency_phone: string; last_seen_at: number | null;
 }
@@ -18,7 +19,7 @@ export interface TouristCtx {
 export async function loadTourist(db: D1Database, token: string): Promise<TouristCtx> {
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) throw new HttpError(404, 'Ссылка недействительна');
   const r = await db.prepare(`SELECT p.id AS participant_id, p.name AS participant_name, p.code, p.token, p.last_seen_at,
-        g.id AS group_id, g.title AS group_title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone,
+        g.agency_id, g.id AS group_id, g.title AS group_title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone,
         g.notes AS group_notes, g.version, g.archived,
         a.name AS agency_name, a.brand_color, a.phone AS agency_phone
       FROM participants p JOIN groups g ON g.id = p.group_id JOIN agencies a ON a.id = g.agency_id
@@ -45,10 +46,18 @@ tourist.get('/t/:token', async (c) => {
   const db = c.env.DB;
   const t = await loadTourist(db, c.req.param('token'));
   const now = Date.now();
-  const [events, ch] = await Promise.all([
+  const [events, ch, msgs, alerts] = await Promise.all([
     touristEvents(db, t),
     db.prepare(`SELECT kind, COUNT(*) AS n FROM channels WHERE participant_id = ? AND active = 1 GROUP BY kind`)
       .bind(t.participant_id).all<{ kind: string; n: number }>(),
+    // Сообщения турфирмы: срочные объявления группе и личные ответы менеджера.
+    db.prepare(`SELECT id, title, body, fire_at AS at FROM notifications
+        WHERE group_id = ? AND kind = 'broadcast' AND status <> 'cancelled' AND fire_at <= ?
+          AND (audience IS NULL OR EXISTS (SELECT 1 FROM json_each(notifications.audience) WHERE value = ?))
+        ORDER BY fire_at DESC LIMIT 30`).bind(t.group_id, now, t.participant_id).all<{ id: string; title: string; body: string; at: number }>(),
+    db.prepare(`SELECT id, kind, minutes, text, status, handled_by, created_at FROM alerts
+        WHERE participant_id = ? AND created_at > ? AND kind IN ('late','help','message') ORDER BY created_at DESC LIMIT 10`)
+      .bind(t.participant_id, now - 2 * 86400_000).all(),
   ]);
   if (!t.last_seen_at || t.last_seen_at < now - 10 * 60_000) {
     c.executionCtx.waitUntil(db.prepare('UPDATE participants SET last_seen_at = ? WHERE id = ?').bind(now, t.participant_id).run().catch(() => {}));
@@ -69,6 +78,8 @@ tourist.get('/t/:token', async (c) => {
       return { ...rest, leads, icon: eventType(r.type).icon, type_name: eventType(r.type).name };
     }),
     channels: Object.fromEntries(ch.results.map((x) => [x.kind, x.n])),
+    messages: msgs.results,
+    alerts: alerts.results,
     push: { vapidPublicKey: c.env.VAPID_PUBLIC_KEY ?? null },
     telegram: c.env.TELEGRAM_BOT_USERNAME && c.env.TELEGRAM_BOT_TOKEN
       ? { url: `https://t.me/${c.env.TELEGRAM_BOT_USERNAME}?start=${t.token}` } : null,
@@ -112,6 +123,21 @@ tourist.post('/t/:token/webpush/remove', async (c) => {
   await c.env.DB.prepare(`UPDATE channels SET active = 0, updated_at = ? WHERE participant_id = ? AND kind = 'webpush' AND address = ?`)
     .bind(Date.now(), t.participant_id, b.endpoint).run();
   return c.json({ ok: true });
+});
+
+// «Я опаздываю» / «Нужна помощь» с сайта.
+tourist.post('/t/:token/alert', async (c) => {
+  const t = await loadTourist(c.env.DB, c.req.param('token'));
+  const b = await readJson(c);
+  const kind = b.kind === 'late' ? 'late' : b.kind === 'help' ? 'help' : null;
+  if (!kind) throw bad('Неизвестный тип обращения');
+  const minutes = kind === 'late' ? Number(b.minutes) : null;
+  if (kind === 'late' && !(Number.isInteger(minutes) && minutes! > 0 && minutes! <= 600)) throw bad('Укажите, на сколько минут опаздываете');
+  const text = typeof b.text === 'string' ? b.text : '';
+  const contact = typeof b.contact === 'string' ? b.contact : '';
+  if (text.length > 1000 || contact.length > 40) throw bad('Слишком длинное сообщение');
+  const a = await createAlert(c.env, t, { kind, minutes, text, contact, source: 'web' });
+  return c.json({ ok: true, alert: { id: a.id, kind: a.kind, minutes: a.minutes, status: a.status, created_at: a.created_at } });
 });
 
 tourist.post('/t/:token/test', async (c) => {

@@ -89,6 +89,7 @@
       LS.set(KEY, data); LS.set(KEY + '.at', fetchedAt);
       if (!seen) { seen = Object.fromEntries(data.events.map((e) => [e.id, e.rev])); LS.set(SEEN, seen); }
       if (changed && !quiet) toast('Расписание обновлено');
+      trackMessages(quiet);
       applyBrand();
       syncPushSubscription();
     } catch (e) {
@@ -99,6 +100,112 @@
       }
     }
     render();
+  }
+
+  // ---------- Сообщения турфирмы ----------
+  const MSG_SEEN = `pt.msgseen.${token}`;
+  let msgSeenAt = LS.get(MSG_SEEN, null);
+  const freshMsgIds = new Set(); // «новые» в этом сеансе — подсвечиваем, пока страница открыта
+  function trackMessages(quiet) {
+    const list = (data && data.messages) || [];
+    if (msgSeenAt == null) { msgSeenAt = list.length ? list[0].at : 0; LS.set(MSG_SEEN, msgSeenAt); return; }
+    const fresh = list.filter((m) => m.at > msgSeenAt);
+    fresh.forEach((m) => freshMsgIds.add(m.id));
+    if (fresh.length) {
+      if (!quiet) toast('📣 Новое сообщение от турфирмы');
+      msgSeenAt = list[0].at; LS.set(MSG_SEEN, msgSeenAt);
+    }
+  }
+  const timeAgo = (ms) => {
+    const m = Math.round((now() - ms) / 60000);
+    if (m < 1) return 'только что';
+    if (m < 60) return `${m} мин назад`;
+    if (m < 24 * 60) return `${Math.round(m / 60)} ч назад`;
+    return fmt(data.group.tz, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(ms);
+  };
+  let showAllMsgs = false;
+  function messagesHtml() {
+    const list = (data.messages || []);
+    if (!list.length) return '';
+    const shown = showAllMsgs ? list : list.slice(0, 3);
+    return `<div class="card msgs" id="msgs"><h3>📣 Сообщения от турфирмы</h3>
+      ${shown.map((m) => `<div class="msg ${freshMsgIds.has(m.id) ? 'new' : ''}">
+        <div class="msg-h"><b>${esc(m.title)}</b><span>${freshMsgIds.has(m.id) ? '<span class="badge">новое</span> ' : ''}${esc(timeAgo(m.at))}</span></div>
+        <div class="msg-b">${esc(m.body)}</div></div>`).join('')}
+      ${list.length > 3 ? `<button class="link-btn" id="allMsgs">${showAllMsgs ? 'Свернуть' : `Показать все (${list.length})`}</button>` : ''}
+    </div>`;
+  }
+
+  // ---------- «Я опаздываю» / «Нужна помощь» ----------
+  const tourActive = () => {
+    const today = dateIn(now(), data.group.tz);
+    return daysBetween(data.group.start_date, today) >= -1 && daysBetween(today, data.group.end_date) >= -1;
+  };
+  function phonesHtml() {
+    const g = data.group, list = [];
+    if (g.guide_phone) list.push([`Гид${g.guide_name ? ' ' + g.guide_name : ''}`, g.guide_phone]);
+    if (data.agency.phone) list.push([data.agency.name, data.agency.phone]);
+    return list.map(([n, p]) => `<a class="btn" href="${esc(telHref(p))}">📞 ${esc(n)}: ${esc(p)}</a>`).join('');
+  }
+  function quickHtml() {
+    const recent = (data.alerts || []).filter((a) => now() - a.created_at < 6 * 3600000 && a.kind !== 'message');
+    const last = recent[0];
+    const state = last ? `<p class="quick-state ${last.status === 'done' ? 'ok' : ''}">${last.status === 'done'
+      ? `✅ ${last.handled_by ? esc(last.handled_by) + ' получил(а)' : 'Менеджер получил'} ваше сообщение`
+      : '⏳ Сообщение отправлено, менеджер скоро ответит'} · ${esc(timeAgo(last.created_at))}</p>` : '';
+    return `<div class="quick">
+      <button class="btn quick-late" data-alert="late">⏰ Я опаздываю</button>
+      <button class="btn quick-help" data-alert="help">🆘 Нужна помощь</button>
+    </div>${state}`;
+  }
+
+  const sheetRoot = document.createElement('div');
+  document.body.appendChild(sheetRoot);
+  function closeSheet() { sheetRoot.innerHTML = ''; }
+  function openAlertSheet(kind) {
+    let minutes = 10;
+    const savedPhone = LS.get('pt.phone', '');
+    const isLate = kind === 'late';
+    sheetRoot.innerHTML = `<div class="sheet-bg"><div class="sheet" role="dialog" aria-modal="true">
+      <h2>${isLate ? '⏰ Я опаздываю' : '🆘 Нужна помощь'}</h2>
+      <p class="sub">${isLate ? 'Менеджер и гид сразу узнают, что вы задерживаетесь.' : 'Менеджер получит сообщение и свяжется с вами.'}</p>
+      ${isLate ? `<div class="label">На сколько примерно?</div><div class="chips">${[5, 10, 15, 30, 60].map((m) => `<button class="chip ${m === minutes ? 'on' : ''}" data-min="${m}">${m === 60 ? 'час+' : m + ' мин'}</button>`).join('')}</div>` : ''}
+      <label class="label" for="alertText">${isLate ? 'Комментарий (необязательно)' : 'Что случилось?'}</label>
+      <textarea id="alertText" maxlength="1000" placeholder="${isLate ? 'Например: стою в пробке, буду у отеля' : 'Например: потерял паспорт, нужна помощь с такси'}"></textarea>
+      <label class="label" for="alertPhone">Ваш телефон для связи (необязательно)</label>
+      <input id="alertPhone" type="tel" maxlength="40" value="${esc(savedPhone)}" placeholder="+7 900 000-00-00">
+      <div class="err-text" id="alertErr"></div>
+      <div class="sheet-actions"><button class="btn" id="alertCancel">Отмена</button><button class="btn primary" id="alertSend">Отправить менеджеру</button></div>
+      <div class="sheet-phones">${phonesHtml()}</div>
+    </div></div>`;
+    const bg = sheetRoot.querySelector('.sheet-bg');
+    bg.addEventListener('click', (e) => { if (e.target === bg) closeSheet(); });
+    $('#alertCancel').onclick = closeSheet;
+    sheetRoot.querySelectorAll('[data-min]').forEach((b) => b.addEventListener('click', () => {
+      minutes = Number(b.dataset.min);
+      sheetRoot.querySelectorAll('[data-min]').forEach((x) => x.classList.toggle('on', x === b));
+    }));
+    $('#alertSend').onclick = async () => {
+      const btn = $('#alertSend');
+      const text = $('#alertText').value.trim(), contact = $('#alertPhone').value.trim();
+      if (!isLate && !text) { $('#alertErr').textContent = 'Опишите коротко, что случилось'; return; }
+      if (contact) LS.set('pt.phone', contact);
+      btn.disabled = true; $('#alertErr').textContent = '';
+      try {
+        await api(`/api/t/${token}/alert`, { method: 'POST', body: JSON.stringify({ kind, minutes: isLate ? minutes : undefined, text, contact }) });
+        sheetRoot.querySelector('.sheet').innerHTML = `<h2>✅ Менеджер получил сообщение</h2>
+          <p class="sub">Когда менеджер ответит, сообщение появится здесь и придёт уведомлением. Если очень срочно — позвоните:</p>
+          <div class="sheet-phones">${phonesHtml()}</div>
+          <div class="sheet-actions"><button class="btn primary" id="alertOk">Хорошо</button></div>`;
+        $('#alertOk').onclick = closeSheet;
+        load({ quiet: true });
+      } catch (e) {
+        btn.disabled = false;
+        $('#alertErr').textContent = e.offlineData || navigator.onLine === false
+          ? 'Нет интернета — сообщение не отправилось. Позвоните по телефону ниже.'
+          : (e.message || 'Не получилось отправить. Позвоните по телефону ниже.');
+      }
+    };
   }
 
   function applyBrand() {
@@ -205,13 +312,17 @@
         ${g.guide_phone || data.agency.phone ? `<a class="icon-btn" href="${esc(telHref(g.guide_phone || data.agency.phone))}">📞 Связь</a>` : ''}
       </header>
       ${status}
+      ${freshMsgIds.size ? messagesHtml() : ''}
       ${hero ? heroHtml(hero, !!current, labels, g) : `<div class="card"><b>${evs.length ? 'Программа тура завершена' : 'Расписание скоро появится'}</b><p class="sub">${evs.length ? 'Спасибо, что путешествовали с нами!' : 'Турфирма ещё заполняет программу — заходите позже.'}</p></div>`}
+      ${tourActive() ? quickHtml() : ''}
+      ${freshMsgIds.size ? '' : messagesHtml()}
       ${notifyHtml()}
       ${[...days.entries()].map(([date, list]) => dayHtml(date, list, today, t, g, labels)).join('')}
       ${g.notes ? `<div class="card"><h3 style="margin-bottom:8px">📝 Памятка</h3><div class="memo">${esc(g.notes)}</div></div>` : ''}
       ${g.guide_name || g.guide_phone || data.agency.phone ? `<div class="card"><h3 style="margin-bottom:8px">Контакты</h3>
         ${g.guide_name || g.guide_phone ? `<p>Гид: ${esc(g.guide_name)} ${g.guide_phone ? `<a href="${esc(telHref(g.guide_phone))}">${esc(g.guide_phone)}</a>` : ''}</p>` : ''}
-        ${data.agency.phone ? `<p>${esc(data.agency.name)}: <a href="${esc(telHref(data.agency.phone))}">${esc(data.agency.phone)}</a></p>` : ''}</div>` : ''}
+        ${data.agency.phone ? `<p>${esc(data.agency.name)}: <a href="${esc(telHref(data.agency.phone))}">${esc(data.agency.phone)}</a></p>` : ''}
+        ${tourActive() ? '' : quickHtml()}</div>` : (tourActive() ? '' : `<div class="card"><h3 style="margin-bottom:8px">Связь с турфирмой</h3>${quickHtml()}</div>`)}
       <div class="foot">${data.participant.name ? esc(data.participant.name) + ' · ' : ''}Ваш код: <code>${esc(data.participant.code)}</code><br>По этому коду расписание можно открыть на другом телефоне.</div>
     </div>`;
 
@@ -226,6 +337,8 @@
     root.querySelectorAll('a[data-stop]').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
     const pb = $('#pushBtn'); if (pb) pb.onclick = () => enablePush(pb);
     const tb = $('#testBtn'); if (tb) tb.onclick = () => testPush(false);
+    root.querySelectorAll('[data-alert]').forEach((b) => b.addEventListener('click', () => openAlertSheet(b.dataset.alert)));
+    const am = $('#allMsgs'); if (am) am.onclick = () => { showAllMsgs = !showAllMsgs; render(); };
 
     if (firstRender) {
       firstRender = false;

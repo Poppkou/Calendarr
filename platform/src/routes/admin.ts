@@ -4,6 +4,9 @@ import { insertNotificationStmt, runDispatch } from '../dispatch';
 import { buildReminders, EVENT_TYPES } from '../schedule';
 import { addDays, daysBetween, isValidDate, isValidTz, tzLabel } from '../time';
 import { tgCall } from '../telegram';
+import { ackAlert, messageTourist, replyToAlert, ALERT_TITLES } from '../alerts';
+import { reviewAt } from '../reviews';
+import { ImportError, parseProgramFile, parseText, finish } from '../import';
 import {
   bad, formatCode, getMeta, hashPassword, HttpError, newCode, newId, newToken, sha256, str, verifyPassword, type Env,
 } from '../util';
@@ -105,10 +108,11 @@ admin.post('/logout', async (c) => {
 
 admin.get('/me', async (c) => {
   const s = c.get('staff');
-  const agency = await c.env.DB.prepare('SELECT id, name, brand_color, phone FROM agencies WHERE id = ?').bind(s.agency_id).first();
+  const agency = await c.env.DB.prepare('SELECT id, name, brand_color, phone, review_url FROM agencies WHERE id = ?').bind(s.agency_id).first();
   const last = await getMeta(c.env.DB, 'last_dispatch_at');
+  const tg = await c.env.DB.prepare('SELECT tg_chat_id FROM staff WHERE id = ?').bind(s.id).first<{ tg_chat_id: string | null }>();
   return c.json({
-    staff: s, agency,
+    staff: { ...s, telegram: !!tg?.tg_chat_id }, agency,
     eventTypes: EVENT_TYPES,
     system: {
       lastDispatchAt: last ? Number(last) : null, serverTime: Date.now(),
@@ -136,8 +140,10 @@ admin.patch('/agency', async (c) => {
   const name = str(b.name, 'Название', { required: true, max: 120 });
   const color = str(b.brand_color, 'Цвет', { max: 7 }) || '#6366f1';
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw bad('Цвет в формате #RRGGBB');
-  await c.env.DB.prepare('UPDATE agencies SET name = ?, brand_color = ?, phone = ? WHERE id = ?')
-    .bind(name, color, str(b.phone, 'Телефон', { max: 40 }), s.agency_id).run();
+  const reviewUrl = str(b.review_url, 'Ссылка для отзывов', { max: 500 });
+  if (reviewUrl && !/^https?:\/\//i.test(reviewUrl)) throw bad('Ссылка для отзывов должна начинаться с https://');
+  await c.env.DB.prepare('UPDATE agencies SET name = ?, brand_color = ?, phone = ?, review_url = ? WHERE id = ?')
+    .bind(name, color, str(b.phone, 'Телефон', { max: 40 }), reviewUrl, s.agency_id).run();
   return c.json({ ok: true });
 });
 
@@ -202,6 +208,8 @@ function parseGroupInput(b: Record<string, any>, prev?: GroupRow) {
     guide_name: str(pick('guide_name'), 'Гид', { max: 120 }),
     guide_phone: str(pick('guide_phone'), 'Телефон гида', { max: 40 }),
     notes: str(pick('notes'), 'Памятка', { max: 5000 }),
+    review_enabled: pick('review_enabled') === undefined ? 1 : (pick('review_enabled') && pick('review_enabled') !== '0' ? 1 : 0),
+    review_at: reviewAt(end_date, home_tz),
   };
 }
 
@@ -209,9 +217,9 @@ admin.post('/groups', async (c) => {
   const s = c.get('staff');
   const g = parseGroupInput(await readJson(c));
   const id = newId(), now = Date.now();
-  await c.env.DB.prepare(`INSERT INTO groups (id, agency_id, title, tz, home_tz, start_date, end_date, guide_name, guide_phone, notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(id, s.agency_id, g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, now, now).run();
+  await c.env.DB.prepare(`INSERT INTO groups (id, agency_id, title, tz, home_tz, start_date, end_date, guide_name, guide_phone, notes, review_enabled, review_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(id, s.agency_id, g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, g.review_enabled, g.review_at, now, now).run();
   return c.json({ id });
 });
 
@@ -244,8 +252,8 @@ admin.patch('/groups/:id', async (c) => {
   const g = parseGroupInput(b, prev);
   const archived = 'archived' in b ? (b.archived ? 1 : 0) : prev.archived;
   await db.batch([
-    db.prepare(`UPDATE groups SET title=?, tz=?, home_tz=?, start_date=?, end_date=?, guide_name=?, guide_phone=?, notes=?, archived=? WHERE id=?`)
-      .bind(g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, archived, prev.id),
+    db.prepare(`UPDATE groups SET title=?, tz=?, home_tz=?, start_date=?, end_date=?, guide_name=?, guide_phone=?, notes=?, archived=?, review_enabled=?, review_at=? WHERE id=?`)
+      .bind(g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, archived, g.review_enabled, g.review_at, prev.id),
     // Архивная группа больше не получает напоминаний.
     ...(archived && !prev.archived ? [db.prepare(`UPDATE notifications SET status = 'cancelled' WHERE group_id = ? AND status = 'pending'`).bind(prev.id)] : []),
     bumpGroupStmt(db, prev.id, Date.now()),
@@ -291,9 +299,9 @@ admin.post('/groups/:id/copy', async (c) => {
   const g: GroupRow = { ...src, id, title, start_date: start, end_date: addDays(src.end_date, shift), archived: 0, version: 1, created_at: now, updated_at: now };
   const events = (await db.prepare('SELECT * FROM events WHERE group_id = ?').bind(src.id).all<EventRow>()).results;
   const stmts: D1PreparedStatement[] = [
-    db.prepare(`INSERT INTO groups (id, agency_id, title, tz, home_tz, start_date, end_date, guide_name, guide_phone, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(id, s.agency_id, g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, now, now),
+    db.prepare(`INSERT INTO groups (id, agency_id, title, tz, home_tz, start_date, end_date, guide_name, guide_phone, notes, review_enabled, review_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .bind(id, s.agency_id, g.title, g.tz, g.home_tz, g.start_date, g.end_date, g.guide_name, g.guide_phone, g.notes, src.review_enabled ?? 1, reviewAt(g.end_date, g.home_tz), now, now),
   ];
   for (const e of events) {
     const dto = toDto(e);
@@ -434,7 +442,7 @@ admin.post('/telegram/setup', async (c) => {
   const { TELEGRAM_BOT_TOKEN: tok, TELEGRAM_WEBHOOK_SECRET: secret } = c.env;
   if (!tok || !secret) throw bad('На сервере не заданы TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET');
   const base = (c.env.PUBLIC_URL || new URL(c.req.url).origin).replace(/\/+$/, '');
-  const r1 = await (await tgCall(tok, 'setWebhook', { url: `${base}/api/telegram/webhook`, secret_token: secret, allowed_updates: ['message'] })).json();
+  const r1 = await (await tgCall(tok, 'setWebhook', { url: `${base}/api/telegram/webhook`, secret_token: secret, allowed_updates: ['message', 'callback_query'] })).json();
   const r2 = await (await tgCall(tok, 'setMyCommands', {
     commands: [
       { command: 'next', description: 'Ближайшие события' },
@@ -445,3 +453,144 @@ admin.post('/telegram/setup', async (c) => {
   return c.json({ webhook: r1, commands: r2 });
 });
 
+
+// ---------- Обращения туристов ----------
+
+admin.get('/alerts/count', async (c) => {
+  const s = c.get('staff');
+  const r = await c.env.DB.prepare(`SELECT COUNT(*) AS n, MAX(created_at) AS last FROM alerts WHERE agency_id = ? AND status = 'new'`)
+    .bind(s.agency_id).first<{ n: number; last: number | null }>();
+  return c.json({ new: r?.n ?? 0, last: r?.last ?? null });
+});
+
+admin.get('/alerts', async (c) => {
+  const s = c.get('staff');
+  const status = c.req.query('status') === 'new' ? 'new' : null;
+  const r = await c.env.DB.prepare(`SELECT a.id, a.kind, a.minutes, a.text, a.contact, a.source, a.status, a.handled_by, a.handled_at, a.created_at,
+      a.group_id, g.title AS group_title, a.participant_id, p.name AS participant_name, p.code, p.token, g.guide_name, g.guide_phone
+    FROM alerts a JOIN groups g ON g.id = a.group_id JOIN participants p ON p.id = a.participant_id
+    WHERE a.agency_id = ? ${status ? "AND a.status = 'new'" : ''}
+    ORDER BY (a.status = 'new') DESC, a.created_at DESC LIMIT 200`).bind(s.agency_id).all<{ code: string }>();
+  return c.json({ alerts: r.results.map((a) => ({ ...a, code: formatCode(a.code) })), titles: ALERT_TITLES });
+});
+
+admin.post('/alerts/:id/ack', async (c) => {
+  const s = c.get('staff');
+  const a = await ackAlert(c.env, c.req.param('id'), s.agency_id, s.name || s.email);
+  return c.json({ ok: true, alert: a });
+});
+
+admin.post('/alerts/:id/reply', async (c) => {
+  const s = c.get('staff');
+  const b = await readJson(c);
+  const text = str(b.text, 'Ответ', { required: true, max: 900 });
+  const ag = await c.env.DB.prepare('SELECT name FROM agencies WHERE id = ?').bind(s.agency_id).first<{ name: string }>();
+  await replyToAlert(c.env, c.req.param('id'), s.agency_id, s.name || '', ag?.name ?? '', text);
+  return c.json({ ok: true });
+});
+
+// Личное сообщение туристу (без обращения) — например, из списка туристов.
+admin.post('/participants/:id/message', async (c) => {
+  const s = c.get('staff');
+  const p = await getParticipant(c.env.DB, s, c.req.param('id'));
+  const text = str((await readJson(c)).text, 'Сообщение', { required: true, max: 900 });
+  const ag = await c.env.DB.prepare('SELECT name FROM agencies WHERE id = ?').bind(s.agency_id).first<{ name: string }>();
+  await messageTourist(c.env, p.group_id, p.id, `💬 ${ag?.name ?? ''}${s.name ? ' · ' + s.name : ''}`, text);
+  return c.json({ ok: true });
+});
+
+// Сотрудник получает обращения в Telegram: ссылка-приглашение в бота.
+admin.post('/telegram/link', async (c) => {
+  const s = c.get('staff');
+  if (!c.env.TELEGRAM_BOT_USERNAME || !c.env.TELEGRAM_BOT_TOKEN) throw bad('Telegram-бот не настроен на сервере');
+  const token = newToken().slice(0, 24);
+  await c.env.DB.prepare('UPDATE staff SET tg_link_token = ? WHERE id = ?').bind(token, s.id).run();
+  return c.json({ url: `https://t.me/${c.env.TELEGRAM_BOT_USERNAME}?start=s_${token}` });
+});
+admin.delete('/telegram/link', async (c) => {
+  const s = c.get('staff');
+  await c.env.DB.prepare('UPDATE staff SET tg_chat_id = NULL, tg_link_token = NULL WHERE id = ?').bind(s.id).run();
+  return c.json({ ok: true });
+});
+
+// ---------- Отзывы ----------
+
+admin.get('/groups/:id/reviews', async (c) => {
+  const s = c.get('staff');
+  const g = await getGroup(c.env.DB, s, c.req.param('id'));
+  const r = await c.env.DB.prepare(`SELECT r.rating, r.comment, r.asked_at, r.answered_at, p.name, p.code
+      FROM reviews r JOIN participants p ON p.id = r.participant_id WHERE r.group_id = ? ORDER BY r.answered_at DESC, r.asked_at DESC`)
+    .bind(g.id).all<{ rating: number | null; code: string }>();
+  const rated = r.results.filter((x) => x.rating);
+  const tg = await c.env.DB.prepare(`SELECT COUNT(DISTINCT p.id) AS n FROM participants p JOIN channels ch ON ch.participant_id = p.id
+      AND ch.kind = 'telegram' AND ch.active = 1 WHERE p.group_id = ? AND p.revoked = 0`).bind(g.id).first<{ n: number }>();
+  return c.json({
+    review_at: g.review_at, review_enabled: !!g.review_enabled, telegramTourists: tg?.n ?? 0,
+    asked: r.results.length, answered: rated.length,
+    average: rated.length ? Math.round((rated.reduce((n, x) => n + x.rating!, 0) / rated.length) * 10) / 10 : null,
+    reviews: r.results.map((x) => ({ ...x, code: formatCode(x.code) })),
+  });
+});
+
+// ---------- Загрузка программы из документа ----------
+
+const MAX_IMPORT_BYTES = 3 * 1024 * 1024;
+
+admin.post('/groups/:id/import', async (c) => {
+  const s = c.get('staff');
+  const g = await getGroup(c.env.DB, s, c.req.param('id'));
+  const ctx = { start_date: g.start_date, end_date: g.end_date };
+  const type = c.req.header('content-type') ?? '';
+  try {
+    if (type.includes('application/json')) {
+      const text = String((await readJson(c)).text ?? '');
+      if (!text.trim()) throw bad('Вставьте текст программы');
+      if (text.length > 200_000) throw bad('Слишком длинный текст');
+      return c.json(finish(parseText(text, ctx), ctx));
+    }
+    if (Number(c.req.header('content-length') || 0) > MAX_IMPORT_BYTES) throw new HttpError(413, 'Файл больше 3 МБ');
+    const buf = new Uint8Array(await c.req.arrayBuffer());
+    if (!buf.length) throw bad('Файл пустой');
+    if (buf.length > MAX_IMPORT_BYTES) throw new HttpError(413, 'Файл больше 3 МБ');
+    const name = decodeURIComponent(c.req.header('x-file-name') ?? '');
+    return c.json(await parseProgramFile(name, buf, ctx));
+  } catch (e) {
+    if (e instanceof ImportError) throw bad(e.message);
+    if (e instanceof HttpError) throw e;
+    console.error('import', e);
+    throw bad('Не удалось прочитать файл. Попробуйте сохранить его заново как .xlsx или .docx, либо вставьте текст программы.');
+  }
+});
+
+// Массовое добавление событий (после проверки менеджером).
+admin.post('/groups/:id/events/bulk', async (c) => {
+  const s = c.get('staff');
+  const db = c.env.DB;
+  const g = await getGroup(db, s, c.req.param('id'));
+  const b = await readJson(c);
+  if (!Array.isArray(b.events) || !b.events.length) throw bad('Нет событий для добавления');
+  if (b.events.length > 300) throw bad('За один раз — не больше 300 событий');
+  const cnt = await db.prepare('SELECT COUNT(*) AS n FROM events WHERE group_id = ?').bind(g.id).first<{ n: number }>();
+  if ((cnt?.n ?? 0) + b.events.length > MAX_EVENTS_PER_GROUP) throw bad(`Не больше ${MAX_EVENTS_PER_GROUP} событий в группе`);
+  const now = Date.now();
+  const errors: { index: number; error: string }[] = [];
+  const stmts: D1PreparedStatement[] = [];
+  b.events.forEach((raw: unknown, index: number) => {
+    try {
+      if (!raw || typeof raw !== 'object') throw bad('Некорректная строка');
+      const { audience, ...rest } = raw as Record<string, unknown>;
+      const input = parseEventInput(rest, g);
+      const out = saveEventStmts(db, g, null, input, { notify: false, now }).stmts;
+      stmts.push(...out.slice(0, -1)); // версию группы поднимем один раз в конце
+    } catch (e) {
+      errors.push({ index, error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+  if (errors.length && !b.skipInvalid) {
+    const error = errors.slice(0, 3).map((e) => `Событие ${e.index + 1}: ${e.error}`).join('; ');
+    return c.json({ ok: false, error, errors }, 400);
+  }
+  stmts.push(bumpGroupStmt(db, g.id, now));
+  await batchChunks(db, stmts);
+  return c.json({ ok: true, added: b.events.length - errors.length, errors });
+});

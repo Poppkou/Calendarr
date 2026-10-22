@@ -7,6 +7,7 @@ import { bad, newId, parseJson, str } from './util';
 export interface GroupRow {
   id: string; agency_id: string; title: string; tz: string; home_tz: string; start_date: string; end_date: string;
   guide_name: string; guide_phone: string; notes: string; archived: number; version: number; created_at: number; updated_at: number;
+  review_enabled: number; review_at: number | null;
 }
 
 export interface EventRow {

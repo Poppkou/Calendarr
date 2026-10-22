@@ -103,7 +103,7 @@ echo "✓ Воркер задеплоен"
 
 # ---------- 6. Telegram webhook ----------
 if [ -n "$TG_USERNAME" ]; then
-  body=$(node -e "console.log(JSON.stringify({url:process.argv[1]+'/api/telegram/webhook',secret_token:process.env.TELEGRAM_WEBHOOK_SECRET,allowed_updates:['message']}))" "$PUBLIC_URL")
+  body=$(node -e "console.log(JSON.stringify({url:process.argv[1]+'/api/telegram/webhook',secret_token:process.env.TELEGRAM_WEBHOOK_SECRET,allowed_updates:['message','callback_query']}))" "$PUBLIC_URL")
   r=$(curl -sS -H 'content-type: application/json' -d "$body" "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook")
   [ "$(echo "$r" | json 'v.ok')" = "true" ] || fail "Не удалось подключить webhook бота: $r"
   curl -sS -o /dev/null -H 'content-type: application/json' "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setMyCommands" \
