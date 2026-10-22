@@ -111,3 +111,30 @@ textarea{min-height:80px;resize:vertical}
   .print-card img{width:42mm;height:42mm;image-rendering:pixelated}
   .print-card .code{font:700 16pt ui-monospace,monospace;letter-spacing:.08em}
 }
+
+/* Обращения */
+.inbox-btn{position:relative}
+.inbox-btn .count{display:inline-block;min-width:20px;padding:1px 6px;margin-left:6px;border-radius:999px;background:var(--danger);color:#fff;font-size:12px;text-align:center}
+.inbox-btn .count[hidden]{display:none}
+.alerts{display:grid;gap:12px}
+.alert{display:grid;gap:4px}
+.alert.is-new{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.alert.is-new.k-late{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn) inset}
+.alert.is-new.k-help{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger) inset}
+.alert-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.alert-h b{font-size:16px}
+.alert-text{background:var(--surface-2);border-radius:10px;padding:8px 10px;margin:4px 0;white-space:pre-wrap}
+.reply textarea{min-height:70px;margin-top:8px}
+
+/* Отзывы */
+.big{font-size:28px;font-weight:800;margin-top:4px}
+.stars{letter-spacing:2px;color:var(--warn)}
+.stars.r1,.stars.r2{color:var(--danger)}
+
+/* Загрузка программы */
+.imp-wrap{max-height:55vh;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.imp{border:0;border-radius:0}
+.imp td,.imp th{padding:6px 8px}
+.imp input[type=text],.imp input[type=date],.imp input[type=time],.imp select{padding:6px 8px;font-size:13px}
+.imp td:nth-child(2){min-width:130px}.imp td:nth-child(3){min-width:95px}.imp td:nth-child(4){min-width:105px}.imp td:nth-child(5){min-width:140px}.imp td:nth-child(6){min-width:220px}
+.imp-notes{margin-top:3px;max-width:320px}

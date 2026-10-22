@@ -83,3 +83,37 @@ h1{font-size:24px;line-height:1.2;margin:2px 0 4px;font-weight:800}
 #toasts{position:fixed;left:0;right:0;bottom:calc(var(--safe-bot) + 16px);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:50;pointer-events:none;padding:0 16px}
 .toast{background:var(--text);color:var(--bg);padding:12px 16px;border-radius:12px;font-weight:600;font-size:14px;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:up .25s ease}
 @keyframes up{from{transform:translateY(10px);opacity:0}}
+
+/* Сообщения турфирмы */
+.msgs h3{font-size:17px;margin-bottom:10px}
+.msg{padding:10px 0;border-top:1px solid var(--line)}
+.msg:first-of-type{border-top:0;padding-top:0}
+.msg.new{background:color-mix(in srgb,var(--accent) 10%,transparent);margin:0 -10px;padding:10px;border-radius:12px;border-top:0}
+.msg-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.msg-h span{color:var(--muted);font-size:13px;white-space:nowrap}
+.msg-h .badge{color:#fff;font-size:10px}
+.msg-b{margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.link-btn{color:var(--accent);font-weight:700;margin-top:8px;padding:4px 0}
+
+/* Быстрая связь */
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}
+.quick .btn{min-height:52px;font-size:15px}
+.quick-late{background:color-mix(in srgb,var(--warn) 18%,var(--surface));border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.quick-help{background:color-mix(in srgb,var(--danger) 14%,var(--surface));border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.quick-state{font-size:14px;color:var(--muted);margin:6px 2px 0}
+.quick-state.ok{color:var(--ok);font-weight:600}
+
+/* Нижняя шторка */
+.sheet-bg{position:fixed;inset:0;background:rgba(5,8,14,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + var(--safe-bot));max-height:92dvh;overflow:auto;animation:up .2s ease}
+.sheet h2{font-size:21px;margin-bottom:4px}
+.sheet .label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+.sheet textarea,.sheet input{width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.sheet textarea{min-height:84px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-weight:700}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheet-actions{display:flex;gap:8px;margin-top:16px}
+.sheet-actions .btn{flex:1}
+.sheet-phones{display:grid;gap:8px;margin-top:14px}
+.sheet-phones .btn{justify-content:flex-start;font-weight:600}

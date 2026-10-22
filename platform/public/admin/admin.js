@@ -9,10 +9,11 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
     del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
   };
-  const toast = (text, err = false) => {
+  const toast = (text, err = false, onClick = null) => {
     const t = document.createElement('div');
     t.className = 'toast' + (err ? ' err' : '');
     t.textContent = text;
+    if (onClick) { t.style.cursor = 'pointer'; t.style.pointerEvents = 'auto'; t.onclick = () => { onClick(); t.remove(); }; }
     $('#toasts').appendChild(t);
     setTimeout(() => t.remove(), err ? 6000 : 3000);
   };
@@ -161,6 +162,8 @@
       <div class="topbar"><span class="brand" id="home">${esc(me.agency.name)}</span>
         <span class="health" title="Последний запуск планировщика: ${esc(ago(sys.lastDispatchAt))}"><span class="dot ${okSched ? 'ok' : 'bad'}"></span>${okSched ? 'Уведомления работают' : 'Планировщик не отвечает'}</span>
         <span class="sp"></span>
+        <a class="btn sm inbox-btn" href="#/inbox">📥 Обращения<span class="count" id="inboxCount" ${alertCount ? '' : 'hidden'}>${alertCount}</span></a>
+        <a class="btn sm" href="/admin/help.html" target="_blank" rel="noopener">❓ Инструкция</a>
         <a class="btn sm" href="#/settings">⚙️ Настройки</a>
         <button class="btn sm" id="logout">Выйти</button></div>
       <main>${warns.length ? `<div class="note warn" style="margin-bottom:16px">${warns.map(esc).join('<br>')}</div>` : ''}${content}</main>`;
@@ -175,13 +178,36 @@
     route();
   }
   window.addEventListener('hashchange', () => { if (me) route(); });
+
+  // Новые обращения туристов: счётчик в шапке, всплывашка и заголовок вкладки.
+  let alertCount = 0, alertLast = null;
+  const baseTitle = document.title;
+  async function pollAlerts() {
+    if (!me || !token) return;
+    try {
+      const r = await api('GET', '/admin/alerts/count');
+      const grew = r.new > alertCount || (r.last && alertLast && r.last > alertLast);
+      alertCount = r.new; alertLast = r.last;
+      const el = $('#inboxCount');
+      if (el) { el.textContent = alertCount; el.hidden = !alertCount; }
+      document.title = alertCount ? `(${alertCount}) ${baseTitle}` : baseTitle;
+      if (grew && alertCount) {
+        toast(`📥 Новое обращение туриста`, false, () => { location.hash = '#/inbox'; });
+        if (location.hash === '#/inbox') inboxPage();
+      }
+    } catch { /* сеть */ }
+  }
+  setInterval(() => { if (document.visibilityState === 'visible') pollAlerts(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollAlerts(); });
   setInterval(async () => { if (me && document.visibilityState === 'visible') { try { me = await api('GET', '/admin/me'); } catch { /* сеть */ } } }, 120000);
 
   function route() {
     $('#modal-root').innerHTML = '';
+    pollAlerts();
     const h = location.hash.replace(/^#\/?/, '').split('/');
     if (h[0] === 'g' && h[1]) return groupPage(h[1], h[2] || 'schedule');
     if (h[0] === 'settings') return settingsPage();
+    if (h[0] === 'inbox') return inboxPage(h[1] === 'all');
     return groupsPage(h[0] === 'archive');
   }
 
@@ -213,12 +239,14 @@
       <div class="row"><label class="f"><span>Гид / сопровождающий</span><input type="text" name="guide_name" maxlength="120" value="${esc(g?.guide_name || '')}"></label>
       <label class="f"><span>Телефон гида</span><input type="tel" name="guide_phone" maxlength="40" value="${esc(g?.guide_phone || '')}"></label></div>
       <label class="f"><span>Памятка туристу (документы, валюта, правила отеля…)</span><textarea name="notes" maxlength="5000">${esc(g?.notes || '')}</textarea></label>
+      <label class="check"><input type="checkbox" name="review_enabled" value="1" ${!g || g.review_enabled ? 'checked' : ''}> Попросить оценку поездки в Telegram на следующий день после тура</label>
       <div class="err" id="gerr"></div>
       <div class="foot"><div class="r"><button type="button" class="btn" data-close>Отмена</button><button class="btn primary" type="submit">${g ? 'Сохранить' : 'Создать'}</button></div></div></form>`,
     (m, close) => {
       $('#gf', m).onsubmit = async (e) => {
         e.preventDefault();
         const body = Object.fromEntries(new FormData(e.target));
+        body.review_enabled = e.target.review_enabled.checked;
         try {
           if (g) { await api('PATCH', `/admin/groups/${g.id}`, body); close(); route(); }
           else { const r = await api('POST', '/admin/groups', body); close(); location.hash = `#/g/${r.id}`; }
@@ -238,7 +266,7 @@
     const g = G.group;
     const connected = G.participants.filter((p) => !p.revoked && (p.webpush || p.telegram)).length;
     const active = G.participants.filter((p) => !p.revoked).length;
-    const tabs = [['schedule', 'Расписание'], ['people', `Туристы (${active})`], ['broadcast', 'Сообщение группе'], ['log', 'Журнал уведомлений']];
+    const tabs = [['schedule', 'Расписание'], ['people', `Туристы (${active})`], ['broadcast', 'Сообщение группе'], ['log', 'Журнал уведомлений'], ['reviews', 'Отзывы']];
     shell(`<div class="head"><div><a href="#/" class="small">← Все группы</a><h1>${esc(g.title)} ${g.archived ? '<span class="pill">архив</span>' : ''}</h1>
         <p class="muted">${esc(fmtDate(g.start_date))} — ${esc(fmtDate(g.end_date))} · время: ${esc(tzName(g.tz, G.tzLabels))} · с уведомлениями ${connected} из ${active}</p></div>
       <div class="actions"><button class="btn" id="editG">✏️ Параметры</button><button class="btn" id="copyG">📋 Копировать на новые даты</button>
@@ -253,7 +281,7 @@
       if (!(await confirmBox(`Удалить группу «${g.title}» со всеми событиями и туристами? Ссылки туристов перестанут работать.`, 'Удалить'))) return;
       await run(async () => { await api('DELETE', `/admin/groups/${g.id}`); toast('Группа удалена'); location.hash = '#/'; });
     };
-    ({ schedule: scheduleTab, people: peopleTab, broadcast: broadcastTab, log: logTab }[tab] || scheduleTab)($('#tabBody'));
+    ({ schedule: scheduleTab, people: peopleTab, broadcast: broadcastTab, log: logTab, reviews: reviewsTab }[tab] || scheduleTab)($('#tabBody'));
   }
 
   function copyForm(g) {
@@ -279,7 +307,7 @@
     const days = [...byDay.keys()].sort();
     const types = me.eventTypes;
     const name = (id) => G.participants.find((p) => p.id === id)?.name || 'турист';
-    el.innerHTML = `<div class="actions" style="margin-bottom:14px"><button class="btn primary" id="addEv">+ Событие</button>
+    el.innerHTML = `<div class="actions" style="margin-bottom:14px"><button class="btn primary" id="addEv">+ Событие</button><button class="btn" id="importEv">📄 Загрузить программу</button>
       <span class="muted small" style="align-self:center">Время вводится местное — как в программе тура. Напоминания туристам рассчитываются автоматически.</span></div>
       ${days.map((d) => {
         const n = Math.round((Date.parse(d) - Date.parse(g.start_date)) / 86400000) + 1;
@@ -292,6 +320,7 @@
           <div class="meta">${e.leads.length ? '🔔 ' + esc(e.leads.map(leadLabel).join(', ')) : '🔕'}</div></div>`).join('') || '<div class="muted small" style="padding:4px 2px">Нет событий</div>'}</div>`;
       }).join('')}`;
     $('#addEv', el).onclick = () => eventForm(null, g.start_date);
+    $('#importEv', el).onclick = () => importDialog();
     $$('[data-add]', el).forEach((b) => b.addEventListener('click', () => eventForm(null, b.dataset.add)));
     $$('[data-ev]', el).forEach((r) => r.addEventListener('click', () => eventForm(G.events.find((e) => e.id === r.dataset.ev))));
   }
@@ -449,6 +478,8 @@
 
   function personModal(p) {
     modal(`<h2>Турист</h2><label class="f"><span>Имя</span><input type="text" id="pn" maxlength="120" value="${esc(p.name)}"></label>
+      <label class="f"><span>Личное сообщение туристу</span><textarea id="pmsg" maxlength="900" placeholder="Придёт уведомлением и появится в его расписании"></textarea></label>
+      <div class="actions" style="margin-bottom:14px"><button class="btn primary" id="sendP">Отправить</button></div>
       <div class="actions" style="margin:6px 0 4px"><button class="btn" id="saveName">Сохранить имя</button>
         <button class="btn" id="regen">🔄 Выдать новую ссылку</button>
         <button class="btn" id="toggle">${p.revoked ? '✅ Включить доступ' : '⛔ Отключить доступ'}</button>
@@ -457,6 +488,11 @@
       <div class="foot"><div class="r"><button class="btn" data-close>Закрыть</button></div></div>`, (m, close) => {
       const patch = (body, msg, btn) => run(async () => { await api('PATCH', `/admin/participants/${p.id}`, body); toast(msg); close(); route(); }, btn);
       $('#saveName', m).onclick = (e) => patch({ name: $('#pn', m).value }, 'Сохранено', e.target);
+      $('#sendP', m).onclick = (e) => {
+        const text = $('#pmsg', m).value.trim();
+        if (!text) return toast('Введите сообщение', true);
+        run(async () => { await api('POST', `/admin/participants/${p.id}/message`, { text }); toast('Сообщение отправлено'); close(); }, e.target);
+      };
       $('#toggle', m).onclick = (e) => patch({ revoked: !p.revoked }, p.revoked ? 'Доступ включён' : 'Доступ отключён', e.target);
       $('#regen', m).onclick = async () => { close(); if (await confirmBox('Выдать новую ссылку? Старая перестанет работать.', 'Выдать')) patch({ regenerate: true }, 'Новая ссылка создана'); };
       $('#delP', m).onclick = async () => { close(); if (await confirmBox(`Удалить туриста «${p.name || p.code}»?`, 'Удалить')) await run(async () => { await api('DELETE', `/admin/participants/${p.id}`); toast('Удалено'); route(); }); };
@@ -531,12 +567,18 @@
         <label class="f"><span>Название (видят туристы)</span><input type="text" id="an" value="${esc(a.name)}" ${owner ? '' : 'disabled'}></label>
         <label class="f"><span>Телефон для экстренной связи</span><input type="tel" id="ap" value="${esc(a.phone)}" ${owner ? '' : 'disabled'}></label>
         <label class="f"><span>Фирменный цвет</span><input type="color" id="ac" value="${esc(a.brand_color)}" ${owner ? '' : 'disabled'}></label>
+        <label class="f"><span>Ссылка для отзывов (Яндекс Карты, 2ГИС)</span><input type="url" id="arv" value="${esc(a.review_url || '')}" placeholder="https://yandex.ru/maps/org/…/reviews" ${owner ? '' : 'disabled'}>
+          <small class="muted">Туристам, поставившим 4–5, бот предложит оставить отзыв по этой ссылке.</small></label>
         ${owner ? '<button class="btn primary" id="saveA">Сохранить</button>' : '<p class="muted small">Изменять может владелец аккаунта.</p>'}</div>
       <div class="card"><h3 style="margin-bottom:12px">Состояние системы</h3>
         <p>Планировщик: ${sys.lastDispatchAt && Date.now() - sys.lastDispatchAt < 180000 ? '<span class="pill ok">работает</span>' : '<span class="pill bad">не отвечает</span>'} <span class="muted small">${esc(ago(sys.lastDispatchAt))}</span></p>
         <p style="margin-top:6px">Push в браузере: ${sys.push ? '<span class="pill ok">настроен</span>' : '<span class="pill bad">нет VAPID-ключей</span>'}</p>
         <p style="margin-top:6px">Telegram-бот: ${sys.telegram ? '<span class="pill ok">настроен</span>' : '<span class="pill warn">не настроен</span>'}</p>
         ${owner && sys.telegram ? '<button class="btn" style="margin-top:12px" id="tgSetup">Переподключить webhook бота</button>' : ''}</div>
+      <div class="card"><h3 style="margin-bottom:12px">📥 Обращения туристов в Telegram</h3>
+        <p class="small muted" style="margin-bottom:10px">«Я опаздываю», «Нужна помощь» и сообщения туристов будут приходить вам в Telegram. Ответить туристу можно прямо там — ответом (Reply) на его сообщение.</p>
+        ${me.staff.telegram ? '<p><span class="pill ok">подключено</span></p><button class="btn" style="margin-top:10px" id="tgUnlink">Отключить</button>'
+          : sys.telegram ? '<button class="btn primary" id="tgLink">Подключить Telegram</button>' : '<p class="small muted">Сначала нужно настроить Telegram-бота на сервере.</p>'}</div>
       <div class="card"><h3 style="margin-bottom:12px">Смена пароля</h3>
         <label class="f"><span>Текущий пароль</span><input type="password" id="op" autocomplete="current-password"></label>
         <label class="f"><span>Новый пароль</span><input type="password" id="np" autocomplete="new-password" minlength="8"></label>
@@ -550,12 +592,169 @@
         <button class="btn" style="margin-top:8px">Добавить сотрудника</button></form></div>` : ''}
       </div>`);
     if (owner) {
-      $('#saveA').onclick = (e) => run(async () => { await api('PATCH', '/admin/agency', { name: $('#an').value, phone: $('#ap').value, brand_color: $('#ac').value }); toast('Сохранено'); await boot(); }, e.target);
+      $('#saveA').onclick = (e) => run(async () => { await api('PATCH', '/admin/agency', { name: $('#an').value, phone: $('#ap').value, brand_color: $('#ac').value, review_url: $('#arv').value.trim() }); toast('Сохранено'); await boot(); }, e.target);
       $('#sf').onsubmit = (e) => { e.preventDefault(); run(async () => { await api('POST', '/admin/staff', Object.fromEntries(new FormData(e.target))); toast('Сотрудник добавлен'); settingsPage(); }); };
       $$('[data-del]').forEach((b) => b.addEventListener('click', async () => { if (await confirmBox('Удалить сотрудника?', 'Удалить')) run(async () => { await api('DELETE', `/admin/staff/${b.dataset.del}`); settingsPage(); }); }));
       const tb = $('#tgSetup'); if (tb) tb.onclick = (e) => run(async () => { const r = await api('POST', '/admin/telegram/setup'); toast(r.webhook?.ok ? 'Webhook бота подключён' : 'Ошибка: ' + (r.webhook?.description || 'неизвестно'), !r.webhook?.ok); }, e.target);
     }
+    const tl = $('#tgLink');
+    if (tl) tl.onclick = (e) => run(async () => {
+      const r = await api('POST', '/admin/telegram/link');
+      modal(`<h2>Подключение Telegram</h2><p style="margin-bottom:14px">Откройте ссылку и нажмите <b>Start</b> в боте. После этого вернитесь сюда.</p>
+        <div class="actions"><a class="btn primary" href="${esc(r.url)}" target="_blank" rel="noopener">Открыть бота</a><button class="btn" id="tgDone">Готово</button></div>
+        <p class="small muted" style="margin-top:12px">Ссылка одноразовая. На телефоне можно отсканировать QR:</p><img alt="QR-код ссылки на бота" src="${qrImg(r.url, 4)}" style="margin-top:8px;width:160px;image-rendering:pixelated">`,
+      (m, close) => { $('#tgDone', m).onclick = async () => { close(); await boot(); location.hash = '#/settings'; settingsPage(); }; });
+    }, e.target);
+    const tu = $('#tgUnlink');
+    if (tu) tu.onclick = (e) => run(async () => { await api('DELETE', '/admin/telegram/link'); toast('Отключено'); await boot(); settingsPage(); }, e.target);
     $('#savePw').onclick = (e) => run(async () => { await api('POST', '/admin/password', { oldPassword: $('#op').value, newPassword: $('#np').value }); toast('Пароль изменён'); $('#op').value = $('#np').value = ''; }, e.target);
+  }
+
+  // ---------- Обращения туристов ----------
+  const ALERT_ICONS = { late: '⏰', help: '🆘', message: '💬', review: '⭐' };
+  function alertHeadline(a) {
+    if (a.kind === 'late') return a.minutes ? `⏰ Опаздывает на ${a.minutes >= 60 ? 'час и больше' : a.minutes + ' мин'}` : '⏰ Опаздывает';
+    return { help: '🆘 Нужна помощь', message: '💬 Сообщение', review: '⭐ Отзыв после тура' }[a.kind] || a.kind;
+  }
+  async function inboxPage(all) {
+    const r = await run(() => api('GET', `/admin/alerts${all ? '' : '?status=new'}`));
+    if (!r) return;
+    shell(`<div class="head"><div><h1>Обращения туристов</h1>
+        <p class="muted">«Я опаздываю», «Нужна помощь» и сообщения из Telegram. Когда вы нажимаете «Принял», турист получает подтверждение.</p></div>
+      <div class="actions"><a class="btn ${all ? '' : 'primary'}" href="#/inbox">Новые</a><a class="btn ${all ? 'primary' : ''}" href="#/inbox/all">Все</a></div></div>
+      ${me.staff.telegram ? '' : `<div class="note" style="margin-bottom:14px">Совет: <a href="#/settings">подключите Telegram</a>, чтобы обращения приходили на телефон сразу.</div>`}
+      ${r.alerts.length ? `<div class="alerts">${r.alerts.map((a) => `<div class="card alert ${a.status === 'new' ? 'is-new k-' + a.kind : ''}" data-id="${esc(a.id)}">
+        <div class="alert-h"><b>${esc(alertHeadline(a))}</b><span class="muted small">${esc(ago(a.created_at))} · ${a.source === 'telegram' ? 'Telegram' : 'сайт'}</span></div>
+        <div>${esc(a.participant_name || 'Турист ' + a.code)} · <a href="#/g/${esc(a.group_id)}">${esc(a.group_title)}</a></div>
+        ${a.text ? `<div class="alert-text">${esc(a.text)}</div>` : ''}
+        ${a.contact ? `<div class="small">Телефон туриста: <a href="tel:${esc(a.contact.replace(/[^\d+]/g, ''))}">${esc(a.contact)}</a></div>` : ''}
+        ${a.guide_phone ? `<div class="small muted">Гид: ${esc(a.guide_name)} ${esc(a.guide_phone)}</div>` : ''}
+        <div class="actions" style="margin-top:10px">
+          ${a.status === 'new' ? '<button class="btn primary sm" data-ack>✅ Принял</button>' : `<span class="pill ok">принято${a.handled_by ? ': ' + esc(a.handled_by) : ''}</span>`}
+          <button class="btn sm" data-reply>💬 Ответить</button></div>
+        <div class="reply" hidden><textarea maxlength="900" placeholder="Ответ придёт туристу уведомлением и в Telegram"></textarea>
+          <div class="actions" style="margin-top:6px"><button class="btn primary sm" data-send>Отправить</button></div></div>
+      </div>`).join('')}</div>` : `<div class="card muted">${all ? 'Обращений пока не было.' : 'Новых обращений нет 👍'}</div>`}`);
+    $$('.alert').forEach((card) => {
+      const id = card.dataset.id;
+      const ack = $('[data-ack]', card);
+      if (ack) ack.onclick = (e) => run(async () => { await api('POST', `/admin/alerts/${id}/ack`); toast('Отмечено, турист получил подтверждение'); await pollAlerts(); inboxPage(all); }, e.target);
+      $('[data-reply]', card).onclick = () => { const r2 = $('.reply', card); r2.hidden = !r2.hidden; if (!r2.hidden) $('textarea', r2).focus(); };
+      $('[data-send]', card).onclick = (e) => {
+        const text = $('.reply textarea', card).value.trim();
+        if (!text) return toast('Введите ответ', true);
+        run(async () => { await api('POST', `/admin/alerts/${id}/reply`, { text }); toast('Ответ отправлен туристу'); await pollAlerts(); inboxPage(all); }, e.target);
+      };
+    });
+  }
+
+  // ----- Отзывы -----
+  async function reviewsTab(el) {
+    el.innerHTML = '<div class="muted">Загрузка…</div>';
+    const r = await run(() => api('GET', `/admin/groups/${G.group.id}/reviews`));
+    if (!r) return;
+    const hz = G.group.home_tz;
+    const when = r.review_at ? `${new Intl.DateTimeFormat('ru-RU', { timeZone: hz, day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(r.review_at)} (${tzShort(hz, G.tzLabels)})` : '—';
+    const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
+    el.innerHTML = `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:16px">
+        <div class="card"><div class="muted small">Средняя оценка</div><div class="big">${r.average ?? '—'}</div></div>
+        <div class="card"><div class="muted small">Ответили</div><div class="big">${r.answered} из ${r.asked}</div></div>
+        <div class="card"><div class="muted small">Когда спросим</div><div style="font-weight:700;margin-top:6px">${r.review_enabled ? esc(when) : 'выключено'}</div>
+          <div class="small muted">в Telegram, туристам с подключённым ботом (${r.telegramTourists})</div></div></div>
+      ${!me.agency.review_url ? `<div class="note warn" style="margin-bottom:14px">Укажите в <a href="#/settings">настройках</a> ссылку на ваши отзывы (Яндекс Карты, 2ГИС) — довольные туристы смогут сразу оставить отзыв.</div>` : ''}
+      ${r.reviews.length ? `<table><thead><tr><th>Турист</th><th>Оценка</th><th>Комментарий</th></tr></thead><tbody>
+        ${r.reviews.map((x) => `<tr><td>${esc(x.name || x.code)}</td><td style="white-space:nowrap">${x.rating ? `<span class="stars r${x.rating}">${stars(x.rating)}</span>` : '<span class="muted small">не ответил</span>'}</td><td>${esc(x.comment || '')}</td></tr>`).join('')}
+      </tbody></table>` : '<div class="card muted">Отзывов пока нет. Бот спросит туристов на следующий день после окончания тура в 12:00 по домашнему времени.</div>'}`;
+  }
+
+  // ----- Загрузка программы из документа -----
+  function importDialog() {
+    const g = G.group, types = me.eventTypes;
+    modal(`<h2>Загрузить программу тура</h2>
+      <p class="muted small" style="margin-bottom:12px">Подойдёт программа в Word (.docx), таблица Excel (.xlsx), CSV или просто текст. Я найду дни, время и названия, а вы проверите перед добавлением.</p>
+      <div class="tabs" style="margin-bottom:12px"><button class="tab on" data-src="file">Файл</button><button class="tab" data-src="text">Вставить текст</button></div>
+      <div data-pane="file"><input type="file" id="impFile" accept=".xlsx,.docx,.csv,.txt"></div>
+      <div data-pane="text" hidden><textarea id="impText" style="min-height:180px" placeholder="День 1. 12 мая&#10;07:00 Трансфер в аэропорт&#10;10:30 Вылет в Стамбул, рейс SU 2136&#10;&#10;День 2&#10;09:00–13:00 Обзорная экскурсия. Сбор в лобби отеля."></textarea>
+        <p class="small muted">Можно вставить таблицу прямо из Excel или Google Таблиц.</p></div>
+      <div class="err" id="impErr"></div>
+      <div class="foot"><div class="r"><button class="btn" data-close>Отмена</button><button class="btn primary" id="impParse">Распознать</button></div></div>`,
+    (m, close) => {
+      let src = 'file';
+      $$('[data-src]', m).forEach((b) => b.addEventListener('click', () => {
+        src = b.dataset.src;
+        $$('[data-src]', m).forEach((x) => x.classList.toggle('on', x === b));
+        $$('[data-pane]', m).forEach((p) => { p.hidden = p.dataset.pane !== src; });
+      }));
+      $('#impParse', m).onclick = async (e) => {
+        $('#impErr', m).textContent = '';
+        e.target.disabled = true;
+        try {
+          let res;
+          if (src === 'file') {
+            const f = $('#impFile', m).files[0];
+            if (!f) throw new Error('Выберите файл');
+            if (f.size > 3 * 1024 * 1024) throw new Error('Файл больше 3 МБ');
+            const r = await fetch(`/api/admin/groups/${g.id}/import`, { method: 'POST', body: f, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/octet-stream', 'x-file-name': encodeURIComponent(f.name) } });
+            res = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(res.error || 'Не удалось прочитать файл');
+          } else {
+            const text = $('#impText', m).value;
+            if (!text.trim()) throw new Error('Вставьте текст программы');
+            res = await api('POST', `/admin/groups/${g.id}/import`, { text });
+          }
+          close();
+          importPreview(res);
+        } catch (err) { $('#impErr', m).textContent = err.message; e.target.disabled = false; }
+      };
+    });
+  }
+
+  function importPreview(res) {
+    const g = G.group, types = me.eventTypes;
+    // Вылет в первый день тура обычно из дома — по домашнему времени; остальное — по месту отдыха.
+    const firstFlight = res.events.find((e) => e.type === 'flight');
+    const rows = res.events.map((e) => ({ ...e, on: true, tz: e === firstFlight && e.local_date <= g.start_date && g.home_tz !== g.tz ? g.home_tz : g.tz }));
+    const tzSelect = (r) => g.home_tz === g.tz ? esc(tzShort(g.tz, G.tzLabels))
+      : `<select data-k="tz">${[g.tz, g.home_tz].map((z) => `<option value="${esc(z)}" ${z === r.tz ? 'selected' : ''}>${esc(tzShort(z, G.tzLabels))}</option>`).join('')}</select>`;
+    modal(`<h2>Проверьте программу</h2>
+      <p class="muted small" style="margin-bottom:10px">Найдено событий: <b>${rows.length}</b>. Исправьте, что нужно, и снимите галочки с лишнего. Напоминания подставятся по типу события.</p>
+      ${res.warnings.length ? `<div class="note warn" style="margin-bottom:10px">${res.warnings.map(esc).join('<br>')}</div>` : ''}
+      <div class="imp-wrap"><table class="imp"><thead><tr><th></th><th>Дата</th><th>Время</th><th>Пояс</th><th>Тип</th><th>Название</th><th>Место сбора</th></tr></thead><tbody>
+      ${rows.map((r, i) => `<tr data-i="${i}">
+        <td><input type="checkbox" data-k="on" ${r.on ? 'checked' : ''} aria-label="Добавить"></td>
+        <td><input type="date" data-k="local_date" value="${esc(r.local_date)}"></td>
+        <td><input type="time" data-k="local_time" value="${esc(r.local_time || '')}"></td>
+        <td class="small">${tzSelect(r)}</td>
+        <td><select data-k="type">${Object.entries(types).map(([k, t]) => `<option value="${k}" ${k === r.type ? 'selected' : ''}>${t.icon} ${esc(t.name)}</option>`).join('')}</select></td>
+        <td><input type="text" data-k="title" value="${esc(r.title)}" maxlength="200">${r.notes ? `<div class="small muted imp-notes" title="${esc(r.notes)}">${esc(r.notes.slice(0, 90))}${r.notes.length > 90 ? '…' : ''}</div>` : ''}${r.warning ? `<div class="small" style="color:var(--warn)">⚠️ ${esc(r.warning)}</div>` : ''}</td>
+        <td><input type="text" data-k="meeting_point" value="${esc(r.meeting_point)}" maxlength="200"></td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="err" id="prevErr"></div>
+      <div class="foot"><div class="r"><button class="btn" data-close>Отмена</button><button class="btn primary" id="impAdd">Добавить события</button></div></div>`,
+    (m, close) => {
+      m.style.maxWidth = '1100px';
+      $$('tr[data-i] [data-k]', m).forEach((inp) => inp.addEventListener('change', () => {
+        const r = rows[Number(inp.closest('tr').dataset.i)];
+        r[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value;
+        updateCount();
+      }));
+      const updateCount = () => { $('#impAdd', m).textContent = `Добавить ${rows.filter((r) => r.on).length} событий`; };
+      updateCount();
+      $('#impAdd', m).onclick = async (e) => {
+        const chosen = rows.filter((r) => r.on);
+        if (!chosen.length) return toast('Не выбрано ни одного события', true);
+        const events = chosen.map(({ on, line, warning, ...r }) => ({ ...r, local_time: r.local_time || null }));
+        e.target.disabled = true;
+        try {
+          const r = await api('POST', `/admin/groups/${g.id}/events/bulk`, { events });
+          toast(`Добавлено событий: ${r.added}`);
+          close(); route();
+        } catch (err) {
+          e.target.disabled = false;
+          $('#prevErr', m).textContent = err.message;
+        }
+      };
+    });
   }
 
   boot();
